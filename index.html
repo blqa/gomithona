@@ -236,7 +236,9 @@
                                     <span class="text-sm text-textmuted whitespace-nowrap">{{ ventasOrdenadas.length }} registros</span>
                                 </div>
                             </div>
-                            <div class="overflow-x-auto p-0 flex-1">
+                            
+                            <!-- VISTA ESCRITORIO (Tabla) -->
+                            <div class="hidden md:block overflow-x-auto p-0 flex-1">
                                 <table class="min-w-full divide-y divide-bordercolor">
                                     <thead class="bg-appbg sticky top-0">
                                         <tr>
@@ -281,6 +283,44 @@
                                     </tbody>
                                 </table>
                             </div>
+
+                            <!-- VISTA MÓVIL (Tarjetas) -->
+                            <div class="block md:hidden p-4 space-y-4 overflow-y-auto flex-1 bg-appbg">
+                                <div v-if="ventasOrdenadas.length === 0" class="text-center text-textmuted py-8 bg-cardbg rounded-lg border border-bordercolor">
+                                    No hay ventas registradas en este periodo.
+                                </div>
+                                <div v-for="venta in ventasOrdenadas" :key="'mob-'+venta.id" class="bg-cardbg border border-bordercolor rounded-xl p-4 shadow-sm relative">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div>
+                                            <p class="font-bold text-textmain text-lg">{{ venta.cliente }}</p>
+                                            <p class="text-xs text-textmuted"><i class="fa-regular fa-calendar mr-1"></i>{{ formatearFecha(venta.fecha) }}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="font-bold text-xl text-brand">{{ formatMoney(venta.cantidad * venta.precio) }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="mb-4 bg-appbg p-3 rounded-lg border border-bordercolor/50">
+                                        <p class="text-sm text-textmain mb-1"><span class="font-semibold text-textmuted">Producto:</span> {{ obtenerNombreProducto(venta.productoId) }}</p>
+                                        <p class="text-sm text-textmain"><span class="font-semibold text-textmuted">Cantidad:</span> {{ venta.cantidad }} un. x {{ formatMoney(venta.precio) }}</p>
+                                        <p v-if="venta.notas" class="text-xs text-textmuted italic mt-2 border-t border-bordercolor pt-2"><i class="fa-solid fa-note-sticky mr-1"></i>{{ venta.notas }}</p>
+                                    </div>
+                                    <div class="flex justify-between items-center border-t border-bordercolor pt-3">
+                                        <button @click="cambiarEstadoPago(venta.id)" 
+                                            :class="['px-3 py-1.5 text-xs font-bold rounded-full border shadow-sm transition-colors', 
+                                                     venta.pagado ? 'bg-green-500/10 text-green-600 border-green-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30']">
+                                            <i :class="venta.pagado ? 'fa-solid fa-check mr-1' : 'fa-solid fa-clock mr-1'"></i> {{ venta.pagado ? 'PAGADO' : 'DEUDA' }}
+                                        </button>
+                                        <div class="flex gap-2">
+                                            <button @click="abrirEdicion('venta', venta)" class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center hover:bg-blue-500/20">
+                                                <i class="fa-solid fa-pen text-xs"></i>
+                                            </button>
+                                            <button @click="eliminarVenta(venta.id)" class="w-8 h-8 rounded-full bg-red-500/10 text-red-600 flex items-center justify-center hover:bg-red-500/20">
+                                                <i class="fa-solid fa-trash text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -290,7 +330,7 @@
                     
                     <!-- Controles de Filtro -->
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-cardbg p-4 rounded-xl shadow-sm border border-bordercolor gap-4">
-                        <h2 class="text-lg font-bold text-textmain"><i class="fa-solid fa-filter mr-2 text-brand"></i>Filtro de Tiempo para Dashboard</h2>
+                        <h2 class="text-lg font-bold text-textmain"><i class="fa-solid fa-filter mr-2 text-brand"></i>Filtro de Tiempo</h2>
                         <select v-model="filtroTiempo" class="rounded-md border-bordercolor shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2.5 border bg-appbg text-textmain font-medium cursor-pointer w-full sm:w-auto">
                             <option value="todo">Todos los tiempos</option>
                             <option value="semana">Esta Semana</option>
@@ -334,11 +374,13 @@
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         
                         <!-- Resumen por Cliente -->
-                        <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor overflow-hidden">
+                        <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor overflow-hidden flex flex-col">
                             <div class="p-4 border-b border-bordercolor bg-appbg">
                                 <h3 class="text-lg font-bold text-textmain"><i class="fa-solid fa-users mr-2 text-brand"></i>Estado por Clientes</h3>
                             </div>
-                            <div class="p-0 overflow-x-auto max-h-96 overflow-y-auto">
+                            
+                            <!-- Escritorio -->
+                            <div class="hidden md:block p-0 overflow-x-auto max-h-96 overflow-y-auto">
                                 <table class="min-w-full divide-y divide-bordercolor">
                                     <thead class="bg-appbg sticky top-0">
                                         <tr>
@@ -361,14 +403,38 @@
                                     </tbody>
                                 </table>
                             </div>
+
+                            <!-- Móvil (Tarjetas) -->
+                            <div class="block md:hidden p-4 space-y-3 bg-appbg flex-1 overflow-y-auto max-h-96">
+                                <div v-if="resumenPorCliente.length === 0" class="text-center text-textmuted py-4 bg-cardbg rounded-lg border border-bordercolor">No hay registros...</div>
+                                <div v-for="cliente in resumenPorCliente" :key="'mob-cli-'+cliente.nombre" class="bg-cardbg border border-bordercolor rounded-lg p-4 shadow-sm flex flex-col gap-3">
+                                    <div class="flex justify-between items-center border-b border-bordercolor pb-2">
+                                        <span class="font-bold text-textmain text-lg">{{ cliente.nombre }}</span>
+                                        <span class="font-bold text-brand text-lg">{{ formatMoney(cliente.total) }}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-sm px-1">
+                                        <div class="text-center">
+                                            <span class="block text-xs text-textmuted uppercase">Pagado</span>
+                                            <span class="text-green-600 font-medium">{{ formatMoney(cliente.pagado) }}</span>
+                                        </div>
+                                        <div class="h-8 w-px bg-bordercolor"></div>
+                                        <div class="text-center">
+                                            <span class="block text-xs text-textmuted uppercase">Deuda</span>
+                                            <span class="text-red-600 font-bold">{{ formatMoney(cliente.deuda) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Resumen por Producto -->
-                        <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor overflow-hidden">
+                        <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor overflow-hidden flex flex-col">
                             <div class="p-4 border-b border-bordercolor bg-appbg">
                                 <h3 class="text-lg font-bold text-textmain"><i class="fa-solid fa-candy-cane mr-2 text-brand"></i>Ventas por Producto</h3>
                             </div>
-                            <div class="p-0 overflow-x-auto max-h-96 overflow-y-auto">
+                            
+                            <!-- Escritorio -->
+                            <div class="hidden md:block p-0 overflow-x-auto max-h-96 overflow-y-auto">
                                 <table class="min-w-full divide-y divide-bordercolor">
                                     <thead class="bg-appbg sticky top-0">
                                         <tr>
@@ -389,6 +455,23 @@
                                     </tbody>
                                 </table>
                             </div>
+
+                            <!-- Móvil (Tarjetas) -->
+                            <div class="block md:hidden p-4 space-y-3 bg-appbg flex-1 overflow-y-auto max-h-96">
+                                <div v-if="resumenPorProducto.length === 0" class="text-center text-textmuted py-4 bg-cardbg rounded-lg border border-bordercolor">No hay ventas registradas...</div>
+                                <div v-for="prod in resumenPorProducto" :key="'mob-prod-'+prod.id" class="bg-cardbg border border-bordercolor rounded-lg p-3 shadow-sm flex justify-between items-center">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold">
+                                            {{ prod.cantidad }}
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-textmain text-sm">{{ prod.nombre }}</p>
+                                            <p class="text-xs text-textmuted">Unidades vendidas</p>
+                                        </div>
+                                    </div>
+                                    <span class="font-bold text-brand">{{ formatMoney(prod.total) }}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -397,11 +480,13 @@
                 <div v-show="currentTab === 'inventario'" class="space-y-6 animate-[fadeIn_0.3s_ease-in-out] flex-1">
                     
                     <!-- Resumen General Stock -->
-                    <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor overflow-hidden">
+                    <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor overflow-hidden flex flex-col">
                         <div class="p-4 border-b border-bordercolor flex justify-between items-center bg-appbg">
                             <h2 class="text-xl font-bold text-textmain"><i class="fa-solid fa-boxes-stacked mr-2 text-brand"></i>Control de Stock Actual</h2>
                         </div>
-                        <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
+                        
+                        <!-- Escritorio -->
+                        <div class="hidden md:block overflow-x-auto max-h-[400px] overflow-y-auto">
                             <table class="min-w-full divide-y divide-bordercolor">
                                 <thead class="bg-brand-light sticky top-0 z-10 border-b border-bordercolor">
                                     <tr>
@@ -437,6 +522,41 @@
                                 </tfoot>
                             </table>
                         </div>
+
+                        <!-- Móvil (Tarjetas de Stock) -->
+                        <div class="block md:hidden p-4 space-y-4 bg-appbg max-h-[500px] overflow-y-auto">
+                            <div v-if="inventarioCalculado.length === 0" class="text-center text-textmuted py-4 bg-cardbg rounded-lg border border-bordercolor">No hay registros de inventario.</div>
+                            
+                            <!-- Tarjeta Totales (Móvil) -->
+                            <div class="bg-gradient-to-r from-brand-light to-brand/10 border border-brand/20 rounded-xl p-4 shadow-sm mb-2">
+                                <h4 class="font-bold text-brand-dark mb-3 border-b border-brand/20 pb-2"><i class="fa-solid fa-chart-simple mr-2"></i>TOTALES GLOBALES</h4>
+                                <div class="grid grid-cols-2 gap-3 text-sm">
+                                    <div class="bg-cardbg/80 p-2 rounded text-center"><span class="text-textmuted block text-xs uppercase">Stock Físico</span> <span class="font-bold text-lg text-textmain">{{ totalesInventario.stock }}</span></div>
+                                    <div class="bg-cardbg/80 p-2 rounded text-center"><span class="text-textmuted block text-xs uppercase">Ganancia Lib.</span> <span class="font-bold text-lg text-brand">{{ formatMoney(totalesInventario.ganancia) }}</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Listado Tarjetas -->
+                            <div v-for="stock in inventarioCalculado" :key="'mob-stock-'+stock.id" 
+                                 :class="['bg-cardbg border rounded-xl p-4 shadow-sm relative overflow-hidden', stock.stockActual <= 2 ? 'border-red-500/50' : 'border-bordercolor']">
+                                <div v-if="stock.stockActual <= 2" class="absolute top-0 right-0 w-16 h-16 pointer-events-none overflow-hidden">
+                                    <div class="absolute transform rotate-45 bg-red-500 text-white text-[10px] font-bold py-1 right-[-35px] top-[15px] w-[120px] text-center">¡BAJO!</div>
+                                </div>
+                                <div class="flex justify-between items-start border-b border-bordercolor pb-3 mb-3">
+                                    <span class="font-bold text-textmain text-lg pr-10">{{ stock.nombre }}</span>
+                                    <div class="text-right shrink-0">
+                                        <span class="text-xs text-textmuted block uppercase font-bold">STOCK</span>
+                                        <span :class="['text-2xl font-bold leading-none', stock.stockActual <= 2 ? 'text-red-600' : 'text-green-600']">{{ stock.stockActual }}</span>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-y-3 gap-x-2 text-sm bg-appbg p-3 rounded-lg border border-bordercolor/50">
+                                    <div><span class="text-textmuted block text-[10px] uppercase font-bold"><i class="fa-solid fa-box-open mr-1"></i>Armadas</span> <span class="font-medium text-textmain">{{ stock.armadas }}</span></div>
+                                    <div><span class="text-textmuted block text-[10px] uppercase font-bold"><i class="fa-solid fa-check mr-1"></i>Vendidas</span> <span class="font-medium text-textmain">{{ stock.vendidas }}</span></div>
+                                    <div><span class="text-textmuted block text-[10px] uppercase font-bold"><i class="fa-solid fa-money-bill mr-1"></i>Inversión</span> <span class="font-medium text-textmain">{{ formatMoney(stock.inversionTotal) }}</span></div>
+                                    <div><span class="text-textmuted block text-[10px] uppercase font-bold"><i class="fa-solid fa-arrow-trend-up mr-1 text-brand"></i>Ganancia Esp.</span> <span class="font-bold text-brand">{{ formatMoney(stock.gananciaLibre) }}</span></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex flex-col md:flex-row gap-6">
@@ -461,14 +581,14 @@
                                         <input type="number" v-model.number="formCompra.costo" step="0.5" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border bg-cardbg text-textmain">
                                     </div>
                                     <div class="w-1/2">
-                                        <label class="block text-sm font-medium text-textmain">Bolsitas Resultantes</label>
+                                        <label class="block text-sm font-medium text-textmain">Bolsitas Result.</label>
                                         <input type="number" v-model.number="formCompra.cantidad" min="1" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border bg-cardbg text-textmain">
                                     </div>
                                 </div>
-                                <div class="bg-appbg p-3 rounded text-sm text-textmain border border-bordercolor">
-                                    <p>Costo x Bolsita: <strong class="text-brand">{{ formCompra.cantidad > 0 ? formatMoney(formCompra.costo / formCompra.cantidad) : '$0.00' }}</strong></p>
+                                <div class="bg-appbg p-3 rounded text-sm text-textmain border border-bordercolor text-center">
+                                    <p>Costo x Bolsita: <strong class="text-brand text-lg block">{{ formCompra.cantidad > 0 ? formatMoney(formCompra.costo / formCompra.cantidad) : '$0.00' }}</strong></p>
                                 </div>
-                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors">
                                     <i class="fa-solid fa-box-open mr-2"></i>Agregar al Stock
                                 </button>
                             </form>
@@ -479,7 +599,9 @@
                             <div class="p-4 border-b border-bordercolor bg-appbg">
                                 <h3 class="text-lg font-bold text-textmain">Historial de Re-Inversiones</h3>
                             </div>
-                            <div class="overflow-x-auto p-0 flex-1">
+                            
+                            <!-- Escritorio -->
+                            <div class="hidden md:block overflow-x-auto p-0 flex-1">
                                 <table class="min-w-full divide-y divide-bordercolor">
                                     <thead class="bg-appbg">
                                         <tr>
@@ -488,7 +610,7 @@
                                             <th class="px-4 py-2 text-right text-xs font-medium text-textmuted uppercase">Inversión</th>
                                             <th class="px-4 py-2 text-center text-xs font-medium text-textmuted uppercase">Bolsitas</th>
                                             <th class="px-4 py-2 text-center text-xs font-medium text-textmuted uppercase">Costo Un.</th>
-                                            <th class="px-4 py-2 text-center text-xs font-medium text-textmuted uppercase"></th>
+                                            <th class="px-4 py-2 text-center text-xs font-medium text-textmuted uppercase">Acción</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-bordercolor">
@@ -502,16 +624,41 @@
                                             <td class="px-4 py-2 text-center text-textmuted">{{ compra.cantidad }}</td>
                                             <td class="px-4 py-2 text-center text-textmuted">{{ formatMoney(compra.costo / compra.cantidad) }}</td>
                                             <td class="px-4 py-2 text-center whitespace-nowrap">
-                                                <button @click="abrirEdicion('compra', compra)" class="text-blue-400 hover:text-blue-700 transition-colors mr-3" title="Editar Inversión">
-                                                    <i class="fa-solid fa-pen text-xs"></i>
+                                                <button @click="abrirEdicion('compra', compra)" class="text-blue-500 hover:text-blue-700 transition-colors mr-3" title="Editar Inversión">
+                                                    <i class="fa-solid fa-pen"></i>
                                                 </button>
-                                                <button @click="eliminarCompra(compra.id)" class="text-red-400 hover:text-red-700 transition-colors" title="Eliminar Inversión">
-                                                    <i class="fa-solid fa-trash text-xs"></i>
+                                                <button @click="eliminarCompra(compra.id)" class="text-red-500 hover:text-red-700 transition-colors" title="Eliminar Inversión">
+                                                    <i class="fa-solid fa-trash"></i>
                                                 </button>
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
+                            </div>
+
+                            <!-- Móvil -->
+                            <div class="block md:hidden p-4 space-y-3 bg-appbg flex-1 overflow-y-auto">
+                                <div v-if="compras.length === 0" class="text-center text-textmuted py-4 bg-cardbg rounded-lg border border-bordercolor">No hay registros...</div>
+                                <div v-for="compra in comprasOrdenadas" :key="'mob-compra-'+compra.id" class="bg-cardbg border border-bordercolor rounded-lg p-4 shadow-sm">
+                                    <div class="flex justify-between items-center mb-2 border-b border-bordercolor pb-2">
+                                        <span class="font-bold text-textmain">{{ obtenerNombreProducto(compra.productoId) }}</span>
+                                        <span class="text-xs text-textmuted"><i class="fa-regular fa-calendar mr-1"></i>{{ formatearFecha(compra.fecha) }}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center mb-3 text-sm">
+                                        <div>
+                                            <p class="text-textmuted">Inversión: <span class="font-bold text-textmain">{{ formatMoney(compra.costo) }}</span></p>
+                                            <p class="text-textmuted">Bolsitas: <span class="font-medium text-textmain">{{ compra.cantidad }} un.</span></p>
+                                        </div>
+                                        <div class="text-right bg-blue-500/10 p-2 rounded border border-blue-500/20">
+                                            <span class="block text-[10px] text-blue-600 uppercase font-bold">Costo c/u</span>
+                                            <span class="font-bold text-blue-700">{{ formatMoney(compra.costo / compra.cantidad) }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end gap-3 border-t border-bordercolor pt-3">
+                                        <button @click="abrirEdicion('compra', compra)" class="flex items-center gap-1 text-blue-500 hover:text-blue-700 text-sm font-medium bg-appbg px-3 py-1 rounded border border-bordercolor"><i class="fa-solid fa-pen text-xs"></i> Editar</button>
+                                        <button @click="eliminarCompra(compra.id)" class="flex items-center gap-1 text-red-500 hover:text-red-700 text-sm font-medium bg-appbg px-3 py-1 rounded border border-bordercolor"><i class="fa-solid fa-trash text-xs"></i> Borrar</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -532,7 +679,7 @@
                                     <label class="block text-sm font-medium text-textmain">Precio de Venta Sugerido ($)</label>
                                     <input type="number" v-model.number="formProducto.precio" step="0.5" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border bg-cardbg text-textmain">
                                 </div>
-                                <button type="submit" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-2 px-4 rounded-md transition-colors">
+                                <button type="submit" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-3 px-4 rounded-md transition-colors">
                                     <i class="fa-solid fa-tag mr-2"></i>Añadir al Catálogo
                                 </button>
                             </form>
@@ -543,22 +690,23 @@
                             <div class="p-4 border-b border-bordercolor bg-appbg flex justify-between items-center">
                                 <h2 class="text-xl font-bold text-textmain">Catálogo de Precios</h2>
                             </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-                                <div v-for="prod in productos" :key="prod.id" class="border border-bordercolor rounded-lg p-4 flex justify-between items-center hover:shadow-md transition-shadow bg-cardbg">
-                                    <div>
-                                        <p class="font-bold text-textmain">{{ prod.nombre }}</p>
-                                        <p class="text-brand font-medium">{{ formatMoney(prod.precio) }}</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-appbg h-full">
+                                <div v-for="prod in productos" :key="prod.id" class="border border-bordercolor rounded-xl p-4 flex justify-between items-center hover:shadow-md transition-shadow bg-cardbg relative overflow-hidden">
+                                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-brand"></div>
+                                    <div class="pl-2">
+                                        <p class="font-bold text-textmain text-lg">{{ prod.nombre }}</p>
+                                        <p class="text-brand font-bold">{{ formatMoney(prod.precio) }}</p>
                                     </div>
-                                    <div class="flex gap-1">
-                                        <button @click="abrirEdicion('producto', prod)" class="text-textmuted hover:text-blue-500 transition-colors bg-appbg hover:bg-blue-500/10 p-2 rounded-full w-8 h-8 flex items-center justify-center" title="Editar">
-                                            <i class="fa-solid fa-pen"></i>
+                                    <div class="flex flex-col gap-2">
+                                        <button @click="abrirEdicion('producto', prod)" class="text-blue-500 hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100 p-2 rounded-full w-8 h-8 flex items-center justify-center border border-blue-200" title="Editar">
+                                            <i class="fa-solid fa-pen text-xs"></i>
                                         </button>
-                                        <button @click="eliminarProducto(prod.id)" class="text-textmuted hover:text-red-500 transition-colors bg-appbg hover:bg-red-500/10 p-2 rounded-full w-8 h-8 flex items-center justify-center" title="Eliminar">
-                                            <i class="fa-solid fa-xmark"></i>
+                                        <button @click="eliminarProducto(prod.id)" class="text-red-500 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100 p-2 rounded-full w-8 h-8 flex items-center justify-center border border-red-200" title="Eliminar">
+                                            <i class="fa-solid fa-trash text-xs"></i>
                                         </button>
                                     </div>
                                 </div>
-                                <div v-if="productos.length === 0" class="col-span-full text-center py-8 text-textmuted">
+                                <div v-if="productos.length === 0" class="col-span-full text-center py-8 text-textmuted bg-cardbg rounded-lg border border-bordercolor">
                                     No hay productos en el catálogo.
                                 </div>
                             </div>
@@ -672,7 +820,7 @@
                             <input type="checkbox" id="editPago" v-model="itemToEdit.pagado" class="h-4 w-4 text-brand focus:ring-brand border-bordercolor rounded bg-cardbg">
                             <label for="editPago" class="text-sm font-medium text-textmain">Estado: Pagado</label>
                         </div>
-                        <button type="submit" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-2 px-4 rounded-md transition-colors mt-4">Actualizar Venta</button>
+                        <button type="submit" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-3 px-4 rounded-md transition-colors mt-4">Actualizar Venta</button>
                     </form>
 
                     <!-- Formulario Edición Compra (Stock) -->
@@ -691,7 +839,7 @@
                                 <input type="number" v-model.number="itemToEdit.cantidad" min="1" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
                             </div>
                         </div>
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors mt-4">Actualizar Stock</button>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors mt-4">Actualizar Stock</button>
                     </form>
 
                     <!-- Formulario Edición Producto -->
@@ -704,7 +852,7 @@
                             <label class="block text-sm font-medium text-textmain">Precio Sugerido ($)</label>
                             <input type="number" v-model.number="itemToEdit.precio" step="0.5" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
                         </div>
-                        <button type="submit" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-4 rounded-md transition-colors mt-4">Actualizar Producto</button>
+                        <button type="submit" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded-md transition-colors mt-4">Actualizar Producto</button>
                     </form>
                 </div>
             </div>
@@ -741,7 +889,7 @@
                 </div>
 
                 <div class="p-4 bg-appbg border-t border-bordercolor text-center">
-                    <button @click="mostrarConfiguracion = false" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-2 px-4 rounded-md transition-colors">
+                    <button @click="mostrarConfiguracion = false" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-3 px-4 rounded-md transition-colors">
                         Guardar Cambios
                     </button>
                 </div>
