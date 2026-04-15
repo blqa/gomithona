@@ -215,9 +215,18 @@
 
                         <!-- Tabla de Ventas Recientes -->
                         <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor flex-1 flex flex-col overflow-hidden">
-                            <div class="p-4 border-b border-bordercolor flex justify-between items-center bg-appbg">
+                            <div class="p-4 border-b border-bordercolor flex justify-between items-center bg-appbg flex-wrap gap-3">
                                 <h2 class="text-xl font-bold text-textmain">Historial de Ventas</h2>
-                                <span class="text-sm text-textmuted">{{ ventas.length }} registros</span>
+                                <div class="flex items-center gap-3">
+                                    <!-- Selector de Fecha Global -->
+                                    <select v-model="filtroTiempo" class="rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain text-sm font-medium">
+                                        <option value="todo">Todos los tiempos</option>
+                                        <option value="semana">Esta Semana</option>
+                                        <option value="mes">Este Mes</option>
+                                        <option value="mes_pasado">Mes Pasado</option>
+                                    </select>
+                                    <span class="text-sm text-textmuted whitespace-nowrap">{{ ventasFiltradas.length }} registros</span>
+                                </div>
                             </div>
                             <div class="overflow-x-auto p-0 flex-1">
                                 <table class="min-w-full divide-y divide-bordercolor">
@@ -233,8 +242,8 @@
                                         </tr>
                                     </thead>
                                     <tbody class="bg-cardbg divide-y divide-bordercolor">
-                                        <tr v-if="ventas.length === 0">
-                                            <td colspan="7" class="px-4 py-8 text-center text-textmuted">No hay ventas registradas aún.</td>
+                                        <tr v-if="ventasOrdenadas.length === 0">
+                                            <td colspan="7" class="px-4 py-8 text-center text-textmuted">No hay ventas registradas en este periodo.</td>
                                         </tr>
                                         <tr v-for="venta in ventasOrdenadas" :key="venta.id" class="hover:bg-appbg transition-colors">
                                             <td class="px-4 py-3 whitespace-nowrap text-sm text-textmuted">{{ formatearFecha(venta.fecha) }}</td>
@@ -270,6 +279,18 @@
 
                 <!-- ==================== PESTAÑA: DASHBOARD ==================== -->
                 <div v-show="currentTab === 'dashboard'" class="space-y-6 animate-[fadeIn_0.3s_ease-in-out] flex-1">
+                    
+                    <!-- Controles de Filtro -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-cardbg p-4 rounded-xl shadow-sm border border-bordercolor gap-4">
+                        <h2 class="text-lg font-bold text-textmain"><i class="fa-solid fa-filter mr-2 text-brand"></i>Filtro de Tiempo para Dashboard</h2>
+                        <select v-model="filtroTiempo" class="rounded-md border-bordercolor shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2.5 border bg-appbg text-textmain font-medium cursor-pointer w-full sm:w-auto">
+                            <option value="todo">Todos los tiempos</option>
+                            <option value="semana">Esta Semana</option>
+                            <option value="mes">Este Mes</option>
+                            <option value="mes_pasado">Mes Pasado</option>
+                        </select>
+                    </div>
+
                     <!-- Tarjetas de Resumen -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor p-6 flex items-center border-l-4 border-l-blue-500">
@@ -320,6 +341,9 @@
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-bordercolor">
+                                        <tr v-if="resumenPorCliente.length === 0">
+                                            <td colspan="4" class="px-4 py-6 text-center text-textmuted">No hay registros para este periodo.</td>
+                                        </tr>
                                         <tr v-for="cliente in resumenPorCliente" :key="cliente.nombre" class="hover:bg-appbg transition-colors">
                                             <td class="px-4 py-2 text-sm font-medium text-textmain">{{ cliente.nombre }}</td>
                                             <td class="px-4 py-2 text-sm text-right text-green-600">{{ formatMoney(cliente.pagado) }}</td>
@@ -346,6 +370,9 @@
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-bordercolor">
+                                        <tr v-if="resumenPorProducto.length === 0">
+                                            <td colspan="3" class="px-4 py-6 text-center text-textmuted">No hay ventas registradas en este periodo.</td>
+                                        </tr>
                                         <tr v-for="prod in resumenPorProducto" :key="prod.id" class="hover:bg-appbg transition-colors">
                                             <td class="px-4 py-2 text-sm font-medium text-textmain">{{ prod.nombre }}</td>
                                             <td class="px-4 py-2 text-sm text-center text-textmuted">{{ prod.cantidad }} un.</td>
@@ -559,6 +586,29 @@
                     <div class="bg-cardbg p-6 rounded-xl shadow-sm border border-bordercolor">
                         <h2 class="text-xl font-bold text-textmain mb-4 border-b border-bordercolor pb-2"><i class="fa-solid fa-file-excel text-green-600 mr-2"></i>Migración Manual desde Excel</h2>
                         <p class="text-textmuted mb-6">Copia las celdas directamente desde tu Excel original y pégalas en los cuadros de abajo. El sistema detectará automáticamente los productos y registrará todas tus ventas y stock en la nube.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label class="block text-sm font-bold text-textmain mb-2">1. Pegar Registros de Ventas Semanales</label>
+                                <p class="text-xs text-textmuted mb-2">Orden esperado: Fecha, Cliente, Producto, Cantidad, Precio Unitario, Total, ¿Pagó?, Notas</p>
+                                <textarea v-model="importVentasText" class="w-full h-48 p-3 border border-bordercolor bg-cardbg text-textmain rounded-md shadow-sm focus:border-brand focus:ring-brand text-sm font-mono whitespace-pre text-nowrap overflow-auto" placeholder="10/4/2026	Michael	Cacahuates Adobados	1	$7	$7	SI	test..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-textmain mb-2">2. Pegar Registros de Stock (Re-Inversión)</label>
+                                <p class="text-xs text-textmuted mb-2">Orden esperado: FECHA, Producto, Re-Inversión, Bolsitas, Costo x Bolsita, Precio Venta...</p>
+                                <textarea v-model="importComprasText" class="w-full h-48 p-3 border border-bordercolor bg-cardbg text-textmain rounded-md shadow-sm focus:border-brand focus:ring-brand text-sm font-mono whitespace-pre text-nowrap overflow-auto" placeholder="22/3/2026	Gom. Tiburón.	$85	20	$4.25	$10.00..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <button @click="procesarImportacion" :disabled="isImporting || (!importVentasText && !importComprasText)" 
+                            :class="['w-full font-bold py-3 px-4 rounded-md transition-colors flex justify-center items-center', 
+                                     (isImporting || (!importVentasText && !importComprasText)) ? 'bg-bordercolor text-textmuted cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white shadow-md']">
+                            <i v-if="isImporting" class="fa-solid fa-spinner fa-spin mr-2"></i>
+                            <i v-else class="fa-solid fa-cloud-arrow-up mr-2"></i>
+                            {{ isImporting ? 'Procesando y Guardando en Firebase...' : 'Procesar y Migrar Datos' }}
+                        </button>
+                    </div>
+                </div>
 
                 <!-- ==================== FOOTER CRÉDITOS ==================== -->
                 <footer class="mt-8 pt-4 border-t border-bordercolor text-center pb-2 shrink-0">
@@ -745,6 +795,7 @@
                     editType: '', // 'venta', 'compra', 'producto'
                     itemToEdit: {},
                     isProcessingBackup: false,
+                    filtroTiempo: 'todo', // Filtro global de tiempo (todo, semana, mes, mes_pasado)
                     
                     // Notificaciones
                     notification: { show: false, message: '', type: 'success' },
@@ -774,13 +825,49 @@
                     return ''; // Default es 'light' (variables raíz)
                 },
 
+                // =============== FILTRO DE TIEMPO ===============
+                ventasFiltradas() {
+                    if (this.filtroTiempo === 'todo') return this.ventas;
+                    
+                    const hoy = new Date();
+                    const diaSemana = hoy.getDay() || 7; // Lunes = 1 ... Domingo = 7
+                    
+                    // Calcular rangos para "Esta Semana"
+                    const inicioSemana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - diaSemana + 1);
+                    const finSemana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + (7 - diaSemana), 23, 59, 59);
+
+                    return this.ventas.filter(v => {
+                        if (!v.fecha) return false;
+                        // Separar la fecha evitando problemas de zonas horarias en la conversión
+                        const [y, m, d] = v.fecha.split('-');
+                        const fechaVenta = new Date(y, m - 1, d);
+
+                        if (this.filtroTiempo === 'semana') {
+                            return fechaVenta >= inicioSemana && fechaVenta <= finSemana;
+                        }
+                        if (this.filtroTiempo === 'mes') {
+                            return fechaVenta.getMonth() === hoy.getMonth() && fechaVenta.getFullYear() === hoy.getFullYear();
+                        }
+                        if (this.filtroTiempo === 'mes_pasado') {
+                            let mesPasado = hoy.getMonth() - 1;
+                            let anio = hoy.getFullYear();
+                            if (mesPasado < 0) {
+                                mesPasado = 11;
+                                anio--;
+                            }
+                            return fechaVenta.getMonth() === mesPasado && fechaVenta.getFullYear() === anio;
+                        }
+                        return true;
+                    });
+                },
+
                 // =============== DASHBOARD COMPUTADOS ===============
                 estadisticas() {
                     let totalVentas = 0;
                     let totalPagado = 0;
                     let totalDeuda = 0;
                     
-                    this.ventas.forEach(v => {
+                    this.ventasFiltradas.forEach(v => {
                         const total = v.cantidad * v.precio;
                         totalVentas += total;
                         if (v.pagado) totalPagado += total;
@@ -791,7 +878,7 @@
                 },
                 resumenPorCliente() {
                     const mapa = {};
-                    this.ventas.forEach(v => {
+                    this.ventasFiltradas.forEach(v => {
                         const nombre = v.cliente.trim();
                         const total = v.cantidad * v.precio;
                         if (!mapa[nombre]) mapa[nombre] = { nombre, pagado: 0, deuda: 0, total: 0 };
@@ -804,7 +891,7 @@
                 },
                 resumenPorProducto() {
                     const mapa = {};
-                    this.ventas.forEach(v => {
+                    this.ventasFiltradas.forEach(v => {
                         if (!mapa[v.productoId]) {
                             mapa[v.productoId] = { id: v.productoId, nombre: this.obtenerNombreProducto(v.productoId), cantidad: 0, total: 0 };
                         }
@@ -815,6 +902,7 @@
                 },
                 
                 // =============== INVENTARIO COMPUTADOS ===============
+                // El inventario SIEMPRE usa todo el historial para calcular el stock físico real
                 inventarioCalculado() {
                     return this.productos.map(prod => {
                         const misCompras = this.compras.filter(c => c.productoId === prod.id);
@@ -852,7 +940,7 @@
 
                 // =============== UTILIDADES ORDEN ===============
                 ventasOrdenadas() {
-                    return [...this.ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha) || b.id - a.id);
+                    return [...this.ventasFiltradas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha) || b.id - a.id);
                 },
                 comprasOrdenadas() {
                     return [...this.compras].sort((a, b) => new Date(b.fecha) - new Date(a.fecha) || b.id - a.id);
