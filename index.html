@@ -146,7 +146,7 @@
                                     <label class="block text-sm font-medium text-textmain">Producto</label>
                                     <select v-model="formVenta.productoId" @change="actualizarPrecioVenta" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border bg-cardbg text-textmain">
                                         <option value="" disabled>Selecciona un producto...</option>
-                                        <option v-for="prod in productos" :key="prod.id" :value="prod.id">
+                                        <option v-for="prod in productosActivos" :key="prod.id" :value="prod.id">
                                             {{ prod.nombre }}
                                         </option>
                                     </select>
@@ -446,8 +446,14 @@
                     
                     <!-- Resumen General Stock -->
                     <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor overflow-hidden flex flex-col">
-                        <div class="p-4 border-b border-bordercolor flex justify-between items-center bg-appbg">
+                        <div class="p-4 border-b border-bordercolor flex justify-between items-center bg-appbg flex-wrap gap-3">
                             <h2 class="text-xl font-bold text-textmain"><i class="fa-solid fa-boxes-stacked mr-2 text-brand"></i>Control de Stock Actual</h2>
+                            
+                            <!-- Ocultar Descontinuados Filtro -->
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="hideDesc" v-model="ocultarDescontinuados" class="h-4 w-4 text-brand focus:ring-brand border-bordercolor rounded bg-cardbg cursor-pointer">
+                                <label for="hideDesc" class="text-sm font-medium text-textmain cursor-pointer select-none">Ocultar descontinuados</label>
+                            </div>
                         </div>
                         
                         <!-- Escritorio -->
@@ -456,6 +462,7 @@
                                 <thead class="bg-brand-light sticky top-0 z-10 border-b border-bordercolor">
                                     <tr>
                                         <th class="px-4 py-3 text-left text-xs font-bold text-brand-dark uppercase">Producto</th>
+                                        <th class="px-4 py-3 text-center text-xs font-bold text-brand-dark uppercase">Estado</th>
                                         <th class="px-4 py-3 text-center text-xs font-bold text-brand-dark uppercase" title="Total producido o invertido">Bolsitas<br>Armadas</th>
                                         <th class="px-4 py-3 text-center text-xs font-bold text-brand-dark uppercase">Vendidas</th>
                                         <th class="px-4 py-3 text-center text-xs font-bold text-brand-dark uppercase bg-brand/10">STOCK ACTUAL</th>
@@ -464,11 +471,22 @@
                                     </tr>
                                 </thead>
                                 <tbody class="bg-cardbg divide-y divide-bordercolor">
-                                    <tr v-for="stock in inventarioCalculado" :key="stock.id" :class="[stock.stockActual <= 3 ? 'bg-rose-500/10' : 'hover:bg-appbg transition-colors']">
+                                    <tr v-if="inventarioFiltrado.length === 0">
+                                        <td colspan="7" class="px-4 py-8 text-center text-textmuted">No hay registros de inventario.</td>
+                                    </tr>
+                                    <tr v-for="stock in inventarioFiltrado" :key="stock.id" :class="[stock.isDescontinuado ? 'bg-slate-50 opacity-75' : (stock.stockActual <= 3 ? 'bg-rose-500/10' : 'hover:bg-appbg transition-colors')]">
                                         <td class="px-4 py-2 text-sm font-medium text-textmain">{{ stock.nombre }}</td>
+                                        <td class="px-4 py-2 text-center">
+                                            <button @click="toggleDescontinuado(stock.id, stock.isDescontinuado)"
+                                                :class="['text-[10px] px-2 py-1 rounded-full font-semibold transition-colors border', 
+                                                         stock.isDescontinuado ? 'bg-slate-100 text-slate-500 border-slate-300 hover:bg-slate-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100']"
+                                                :title="stock.isDescontinuado ? 'Clic para reactivar' : 'Clic para descontinuar y ocultar alertas'">
+                                                {{ stock.isDescontinuado ? 'PAUSADO' : 'ACTIVO' }}
+                                            </button>
+                                        </td>
                                         <td class="px-4 py-2 text-sm text-center text-textmuted">{{ stock.armadas }}</td>
                                         <td class="px-4 py-2 text-sm text-center text-textmuted">{{ stock.vendidas }}</td>
-                                        <td class="px-4 py-2 text-lg text-center font-bold" :class="stock.stockActual <= 3 ? 'text-rose-600' : 'text-emerald-600'">
+                                        <td class="px-4 py-2 text-lg text-center font-bold" :class="stock.isDescontinuado ? 'text-slate-500' : (stock.stockActual <= 3 ? 'text-rose-600' : 'text-emerald-600')">
                                             {{ stock.stockActual }}
                                         </td>
                                         <td class="px-4 py-2 text-sm text-right text-textmuted">{{ formatMoney(stock.inversionTotal) }}</td>
@@ -477,7 +495,7 @@
                                 </tbody>
                                 <tfoot class="bg-appbg font-bold sticky bottom-0 border-t border-bordercolor">
                                     <tr>
-                                        <td class="px-4 py-3 text-right text-textmain">TOTALES:</td>
+                                        <td colspan="2" class="px-4 py-3 text-right text-textmain">TOTALES (VISIBLES):</td>
                                         <td class="px-4 py-3 text-center text-textmain">{{ totalesInventario.armadas }}</td>
                                         <td class="px-4 py-3 text-center text-textmain">{{ totalesInventario.vendidas }}</td>
                                         <td class="px-4 py-3 text-center text-textmain">{{ totalesInventario.stock }}</td>
@@ -490,11 +508,11 @@
 
                         <!-- Móvil (Tarjetas de Stock) -->
                         <div class="block md:hidden p-4 space-y-4 bg-appbg max-h-[500px] overflow-y-auto">
-                            <div v-if="inventarioCalculado.length === 0" class="text-center text-textmuted py-4 bg-cardbg rounded-lg border border-bordercolor">No hay registros de inventario.</div>
+                            <div v-if="inventarioFiltrado.length === 0" class="text-center text-textmuted py-4 bg-cardbg rounded-lg border border-bordercolor">No hay registros de inventario o están todos ocultos.</div>
                             
                             <!-- Tarjeta Totales (Móvil) -->
                             <div class="bg-gradient-to-r from-brand-light to-brand/10 border border-brand/20 rounded-xl p-4 shadow-sm mb-2">
-                                <h4 class="font-bold text-brand-dark mb-3 border-b border-brand/20 pb-2"><i class="fa-solid fa-chart-simple mr-2"></i>TOTALES GLOBALES</h4>
+                                <h4 class="font-bold text-brand-dark mb-3 border-b border-brand/20 pb-2"><i class="fa-solid fa-chart-simple mr-2"></i>TOTALES VISIBLES</h4>
                                 <div class="grid grid-cols-2 gap-3 text-sm">
                                     <div class="bg-cardbg/80 p-2 rounded text-center"><span class="text-textmuted block text-xs uppercase">Stock Físico</span> <span class="font-bold text-lg text-textmain">{{ totalesInventario.stock }}</span></div>
                                     <div class="bg-cardbg/80 p-2 rounded text-center"><span class="text-textmuted block text-xs uppercase">Ganancia Lib.</span> <span class="font-bold text-lg text-brand">{{ formatMoney(totalesInventario.ganancia) }}</span></div>
@@ -502,16 +520,23 @@
                             </div>
 
                             <!-- Listado Tarjetas -->
-                            <div v-for="stock in inventarioCalculado" :key="'mob-stock-'+stock.id" 
-                                 :class="['bg-cardbg border rounded-xl p-4 shadow-sm relative overflow-hidden', stock.stockActual <= 3 ? 'border-rose-500/50' : 'border-bordercolor']">
-                                <div v-if="stock.stockActual <= 3" class="absolute top-0 right-0 w-16 h-16 pointer-events-none overflow-hidden">
+                            <div v-for="stock in inventarioFiltrado" :key="'mob-stock-'+stock.id" 
+                                 :class="['bg-cardbg border rounded-xl p-4 shadow-sm relative overflow-hidden', stock.isDescontinuado ? 'border-slate-300 opacity-80' : (stock.stockActual <= 3 ? 'border-rose-500/50' : 'border-bordercolor')]">
+                                <div v-if="stock.stockActual <= 3 && !stock.isDescontinuado" class="absolute top-0 right-0 w-16 h-16 pointer-events-none overflow-hidden">
                                     <div class="absolute transform rotate-45 bg-rose-500 text-white text-[10px] font-bold py-1 right-[-35px] top-[15px] w-[120px] text-center">¡BAJO!</div>
                                 </div>
                                 <div class="flex justify-between items-start border-b border-bordercolor pb-3 mb-3">
-                                    <span class="font-bold text-textmain text-lg pr-10">{{ stock.nombre }}</span>
+                                    <div>
+                                        <span class="font-bold text-textmain text-lg pr-2">{{ stock.nombre }}</span>
+                                        <button @click="toggleDescontinuado(stock.id, stock.isDescontinuado)"
+                                            :class="['text-[10px] px-2 py-0.5 rounded-full font-semibold transition-colors border inline-block mt-1', 
+                                                     stock.isDescontinuado ? 'bg-slate-100 text-slate-500 border-slate-300' : 'bg-emerald-50 text-emerald-600 border-emerald-200']">
+                                            {{ stock.isDescontinuado ? 'PAUSADO' : 'ACTIVO' }}
+                                        </button>
+                                    </div>
                                     <div class="text-right shrink-0">
                                         <span class="text-xs text-textmuted block uppercase font-bold">STOCK</span>
-                                        <span :class="['text-2xl font-bold leading-none', stock.stockActual <= 3 ? 'text-rose-600' : 'text-emerald-600']">{{ stock.stockActual }}</span>
+                                        <span :class="['text-2xl font-bold leading-none', stock.isDescontinuado ? 'text-slate-500' : (stock.stockActual <= 3 ? 'text-rose-600' : 'text-emerald-600')]">{{ stock.stockActual }}</span>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-y-3 gap-x-2 text-sm bg-appbg p-3 rounded-lg border border-bordercolor/50">
@@ -537,7 +562,7 @@
                                     <label class="block text-sm font-medium text-textmain">Producto</label>
                                     <select v-model="formCompra.productoId" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border bg-cardbg text-textmain">
                                         <option value="" disabled>Selecciona producto...</option>
-                                        <option v-for="prod in productos" :key="prod.id" :value="prod.id">{{ prod.nombre }}</option>
+                                        <option v-for="prod in productosActivos" :key="prod.id" :value="prod.id">{{ prod.nombre }}</option>
                                     </select>
                                 </div>
                                 <div class="flex gap-4">
@@ -656,11 +681,12 @@
                                 <h2 class="text-xl font-bold text-textmain">Catálogo de Precios</h2>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-appbg h-full">
-                                <div v-for="prod in productos" :key="prod.id" class="border border-bordercolor rounded-xl p-4 flex justify-between items-center hover:shadow-md transition-shadow bg-cardbg relative overflow-hidden">
-                                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-brand"></div>
+                                <div v-for="prod in productos" :key="prod.id" 
+                                     :class="['border border-bordercolor rounded-xl p-4 flex justify-between items-center transition-shadow bg-cardbg relative overflow-hidden', prod.isDescontinuado ? 'opacity-70 grayscale' : 'hover:shadow-md']">
+                                    <div :class="['absolute left-0 top-0 bottom-0 w-1.5', prod.isDescontinuado ? 'bg-slate-400' : 'bg-brand']"></div>
                                     <div class="pl-2">
                                         <p class="font-bold text-textmain text-lg">{{ prod.nombre }}</p>
-                                        <p class="text-brand font-bold">{{ formatMoney(prod.precio) }}</p>
+                                        <p class="text-brand font-bold">{{ formatMoney(prod.precio) }} <span v-if="prod.isDescontinuado" class="text-xs text-slate-500 font-normal ml-1 border rounded px-1">(Pausado)</span></p>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <button @click="abrirEdicion('producto', prod)" class="text-brand-dark hover:text-brand transition-colors bg-brand-light hover:bg-brand/20 p-2 rounded-full w-8 h-8 flex items-center justify-center border border-brand/20" title="Editar">
@@ -875,6 +901,7 @@
                     itemToEdit: {},
                     isProcessingBackup: false,
                     filtroTiempo: 'todo',
+                    ocultarDescontinuados: false,
                     
                     // Notificaciones (Toasts apilables)
                     toasts: [],
@@ -910,8 +937,10 @@
                         if (this.alertedInitialStock) return;
                         this.alertedInitialStock = true; // Solo alertamos 1 vez por sesión
 
-                        // Productos con 3 o menos de stock
-                        const lowStockItems = this.inventarioCalculado.filter(item => item.stockActual <= 3).map(item => item.nombre);
+                        // Omitir los productos descontinuados en la alerta de stock
+                        const lowStockItems = this.inventarioCalculado
+                            .filter(item => item.stockActual <= 3 && !item.isDescontinuado)
+                            .map(item => item.nombre);
                         
                         if (lowStockItems.length > 0) {
                             const formatter = new Intl.ListFormat('es', { style: 'long', type: 'conjunction' });
@@ -948,6 +977,11 @@
                         }
                         return true;
                     });
+                },
+
+                // Lista de productos activos para los selects de venta/re-inversión
+                productosActivos() {
+                    return this.productos.filter(p => !p.isDescontinuado);
                 },
 
                 // =============== DASHBOARD COMPUTADOS ===============
@@ -999,13 +1033,22 @@
                         const gananciaLibre = ingresoEsperadoTotal - inversionTotal;
 
                         return {
-                            id: prod.id, nombre: prod.nombre, armadas, vendidas,
+                            id: prod.id, 
+                            nombre: prod.nombre, 
+                            isDescontinuado: prod.isDescontinuado || false,
+                            armadas, vendidas,
                             stockActual, inversionTotal, gananciaLibre
                         };
                     }).filter(item => item.armadas > 0 || item.vendidas > 0);
                 },
+                inventarioFiltrado() {
+                    return this.inventarioCalculado.filter(item => {
+                        if (this.ocultarDescontinuados && item.isDescontinuado) return false;
+                        return true;
+                    });
+                },
                 totalesInventario() {
-                    return this.inventarioCalculado.reduce((totales, item) => {
+                    return this.inventarioFiltrado.reduce((totales, item) => {
                         totales.armadas += item.armadas; totales.vendidas += item.vendidas;
                         totales.stock += item.stockActual; totales.inversion += item.inversionTotal;
                         totales.ganancia += item.gananciaLibre;
@@ -1074,6 +1117,21 @@
                     }
                 },
 
+                // Lógica de Negocio: Productos -> Activar/Descontinuar
+                async toggleDescontinuado(productoId, currentStatus) {
+                    if (!this.user) return;
+                    try {
+                        await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', productoId.toString()), 
+                            { isDescontinuado: !currentStatus }, 
+                            { merge: true }
+                        );
+                        this.addToast(!currentStatus ? 'Producto marcado como descontinuado. Ya no recibirás alertas.' : 'Producto reactivado.');
+                    } catch(e) {
+                        console.error(e);
+                        this.addToast('Error al actualizar estado', 'error');
+                    }
+                },
+
                 // Lógica de Negocio: Ventas
                 actualizarPrecioVenta() {
                     const prod = this.productos.find(p => p.id === this.formVenta.productoId);
@@ -1133,7 +1191,7 @@
                 async registrarProducto() {
                     if (!this.user) return;
                     const id = Date.now();
-                    const nuevoProducto = { id, nombre: this.formProducto.nombre, precio: this.formProducto.precio };
+                    const nuevoProducto = { id, nombre: this.formProducto.nombre, precio: this.formProducto.precio, isDescontinuado: false };
                     try {
                         await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id.toString()), nuevoProducto);
                         this.formProducto = { nombre: '', precio: 10 };
@@ -1150,7 +1208,7 @@
                     if(confirm('¿Eliminar producto del catálogo?')) {
                         try {
                             await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id.toString()));
-                            this.addToast('Producto eliminada', 'error');
+                            this.addToast('Producto eliminado', 'error');
                         } catch(e) { console.error(e); }
                     }
                 },
@@ -1182,11 +1240,11 @@
 
                 exportarCSV() {
                     const escape = (str) => `"${String(str || '').replace(/"/g, '""')}"`;
-                    let csv = "TIPO,ID,FECHA,CLIENTE,PRODUCTO_ID,NOMBRE_PRODUCTO,CANTIDAD,PRECIO,COSTO,PAGADO,NOTAS\n";
+                    let csv = "TIPO,ID,FECHA,CLIENTE,PRODUCTO_ID,NOMBRE_PRODUCTO,CANTIDAD,PRECIO,COSTO,PAGADO,NOTAS,DESCONTINUADO\n";
                     
-                    this.productos.forEach(p => { csv += `PRODUCTO,${p.id},,,,${escape(p.nombre)},,${p.precio},,,\n`; });
-                    this.ventas.forEach(v => { csv += `VENTA,${v.id},${v.fecha},${escape(v.cliente)},${v.productoId},,${v.cantidad},${v.precio},,${v.pagado},${escape(v.notas)}\n`; });
-                    this.compras.forEach(c => { csv += `COMPRA,${c.id},${c.fecha},,${c.productoId},,${c.cantidad},,,${c.costo},,\n`; });
+                    this.productos.forEach(p => { csv += `PRODUCTO,${p.id},,,,${escape(p.nombre)},,${p.precio},,,,${p.isDescontinuado || false}\n`; });
+                    this.ventas.forEach(v => { csv += `VENTA,${v.id},${v.fecha},${escape(v.cliente)},${v.productoId},,${v.cantidad},${v.precio},,${v.pagado},${escape(v.notas)},\n`; });
+                    this.compras.forEach(c => { csv += `COMPRA,${c.id},${c.fecha},,${c.productoId},,${c.cantidad},,,${c.costo},,,\n`; });
 
                     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                     const link = document.createElement("a");
@@ -1217,7 +1275,7 @@
 
                             if (tipo === 'PRODUCTO') {
                                 await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id), {
-                                    id: Number(id), nombre: cols[5], precio: Number(cols[7])
+                                    id: Number(id), nombre: cols[5], precio: Number(cols[7]), isDescontinuado: cols[11] === 'true'
                                 });
                             } else if (tipo === 'VENTA') {
                                 await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', id), {
@@ -1316,7 +1374,7 @@
                                 const c = parsedCompras.find(comp => comp.productoNombre.toLowerCase() === nameLower);
                                 if (c && c.precioVentaCat) suggestedPrice = c.precioVentaCat;
 
-                                const newProd = { id, nombre: prodName, precio: suggestedPrice };
+                                const newProd = { id, nombre: prodName, precio: suggestedPrice, isDescontinuado: false };
                                 await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id.toString()), newProd);
                                 productMap[nameLower] = id;
                             }
