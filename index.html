@@ -114,7 +114,8 @@
                 
                 <!-- Contenedor de Toasts -->
                 <div class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
-                    <TransitionGroup name="toast">
+                    <!-- Se corrige el nombre del componente para evitar el warning de Vue -->
+                    <transition-group name="toast">
                         <div v-for="toast in toasts" :key="toast.id" 
                              :class="['p-4 rounded-lg shadow-lg text-white flex items-start gap-3 w-max max-w-[90vw] sm:max-w-sm pointer-events-auto', 
                                       toast.type === 'success' ? 'bg-emerald-500' : (toast.type === 'error' ? 'bg-rose-500' : 'bg-orange-500')]">
@@ -124,7 +125,7 @@
                                 <i class="fa-solid fa-xmark"></i>
                             </button>
                         </div>
-                    </TransitionGroup>
+                    </transition-group>
                 </div>
 
                 <!-- ==================== PESTAÑA: REGISTRO DE VENTAS ==================== -->
@@ -801,6 +802,26 @@
                             {{ isImporting ? 'Procesando y Guardando en Firebase...' : 'Procesar y Migrar Datos' }}
                         </button>
                     </div>
+
+                    <!-- Sincronización de Dispositivos -->
+                    <div class="bg-cardbg p-6 rounded-xl shadow-sm border border-bordercolor">
+                        <h2 class="text-xl font-bold text-textmain mb-4 border-b border-bordercolor pb-2"><i class="fa-solid fa-mobile-screen text-brand mr-2"></i>Sincronizar Dispositivos</h2>
+                        <p class="text-sm text-textmuted mb-4">El modo incógnito y los celulares te detectan como un nuevo usuario y por eso muestran la pantalla vacía. Para ver tus datos allí, copia tu código y pégalo en tu celular.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-appbg p-4 rounded-lg border border-bordercolor">
+                                <label class="block text-xs font-bold text-textmain uppercase mb-2">Tu código en este dispositivo:</label>
+                                <code class="block w-full p-2 bg-white border border-bordercolor rounded text-sm text-brand-dark select-all break-all">{{ activeUid }}</code>
+                            </div>
+                            <div class="bg-appbg p-4 rounded-lg border border-bordercolor">
+                                <label class="block text-xs font-bold text-textmain uppercase mb-2">Vincular código externo:</label>
+                                <div class="flex gap-2">
+                                    <input type="text" v-model="syncIdInput" placeholder="Pega el código..." class="w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain text-sm">
+                                    <button @click="vincularCuenta" class="bg-brand hover:bg-brand-dark text-white font-bold py-2 px-4 rounded-md transition-colors">Vincular</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ==================== FOOTER CRÉDITOS ==================== -->
@@ -933,6 +954,8 @@
                 return {
                     user: null,
                     unsubscribes: [],
+                    customUid: null, // UID manual para sincronizar dispositivos
+                    syncIdInput: '',
                     
                     // Navegación
                     tabs: [
@@ -1004,8 +1027,14 @@
                             .map(item => item.nombre);
                         
                         if (lowStockItems.length > 0) {
-                            const formatter = new Intl.ListFormat('es', { style: 'long', type: 'conjunction' });
-                            const nombres = formatter.format(lowStockItems);
+                            let nombres = '';
+                            // Uso de bloque Try-Catch porque algunos móviles antiguos crashean con Intl.ListFormat
+                            try {
+                                const formatter = new Intl.ListFormat('es', { style: 'long', type: 'conjunction' });
+                                nombres = formatter.format(lowStockItems);
+                            } catch (e) {
+                                nombres = lowStockItems.join(', ');
+                            }
                             
                             this.addToast(`⚠️ Hey, se están acabando: ${nombres}, ¡toca re-inversión!`, 'warning');
                         }
@@ -1013,6 +1042,11 @@
                 }
             },
             computed: {
+                // =============== ID DE SESION ACTIVA ===============
+                activeUid() {
+                    return this.customUid || (this.user ? this.user.uid : null);
+                },
+
                 // =============== FILTRO DE TIEMPO ===============
                 ventasFiltradas() {
                     if (this.filtroTiempo === 'todo') return this.ventas;
@@ -1176,6 +1210,18 @@
                 }
             },
             methods: {
+                // Sincronizar Cuentas (Para celular / Incógnito)
+                vincularCuenta() {
+                    if (this.syncIdInput && this.syncIdInput.trim().length > 10) {
+                        this.customUid = this.syncIdInput.trim();
+                        this.setupListeners();
+                        this.addToast('Dispositivo vinculado correctamente. Cargando datos...');
+                        this.syncIdInput = '';
+                    } else {
+                        this.addToast('El código ingresado no es válido.', 'error');
+                    }
+                },
+
                 // Función Generica para Ordenar Tablas (Sort)
                 sortBy(tableObjName, colName) {
                     if (this[tableObjName].col === colName) {
@@ -1247,10 +1293,11 @@
                     this.showEditModal = true;
                 },
                 async guardarEdicion() {
-                    if (!this.user) return;
+                    const uid = this.activeUid;
+                    if (!uid) return;
                     try {
                         const coleccionName = this.editType === 'venta' ? 'ventas' : (this.editType === 'compra' ? 'compras' : 'productos');
-                        await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, coleccionName, this.itemToEdit.id.toString()), this.itemToEdit, { merge: true });
+                        await setDoc(doc(db, 'artifacts', appId, 'users', uid, coleccionName, this.itemToEdit.id.toString()), this.itemToEdit, { merge: true });
                         this.showEditModal = false;
                         this.addToast('Registro actualizado correctamente');
                     } catch(e) {
@@ -1261,9 +1308,10 @@
 
                 // Lógica de Negocio: Productos -> Activar/Descontinuar
                 async toggleDescontinuado(productoId, currentStatus) {
-                    if (!this.user) return;
+                    const uid = this.activeUid;
+                    if (!uid) return;
                     try {
-                        await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', productoId.toString()), 
+                        await setDoc(doc(db, 'artifacts', appId, 'users', uid, 'productos', productoId.toString()), 
                             { isDescontinuado: !currentStatus }, 
                             { merge: true }
                         );
@@ -1280,29 +1328,32 @@
                     if (prod) this.formVenta.precio = prod.precio;
                 },
                 async registrarVenta() {
-                    if (!this.user) return;
+                    const uid = this.activeUid;
+                    if (!uid) return;
                     const id = Date.now();
                     const nuevaVenta = { id, ...this.formVenta };
                     try {
-                        await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', id.toString()), nuevaVenta);
+                        await setDoc(doc(db, 'artifacts', appId, 'users', uid, 'ventas', id.toString()), nuevaVenta);
                         this.formVenta = { fecha: this.formVenta.fecha, cliente: '', productoId: '', cantidad: 1, precio: 0, pagado: false, notas: '' };
                         this.addToast('Venta registrada con éxito');
                     } catch(e) { console.error(e); this.addToast('Error al guardar', 'error'); }
                 },
                 async cambiarEstadoPago(id) {
-                    if (!this.user) return;
+                    const uid = this.activeUid;
+                    if (!uid) return;
                     const venta = this.ventas.find(v => v.id === id);
                     if (venta) {
                         try {
-                            await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', id.toString()), { ...venta, pagado: !venta.pagado });
+                            await setDoc(doc(db, 'artifacts', appId, 'users', uid, 'ventas', id.toString()), { ...venta, pagado: !venta.pagado });
                         } catch(e) { console.error(e); }
                     }
                 },
                 async eliminarVenta(id) {
-                    if (!this.user) return;
+                    const uid = this.activeUid;
+                    if (!uid) return;
                     if(confirm('¿Estás seguro de eliminar esta venta? Esto afectará tu caja y stock.')) {
                         try {
-                            await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', id.toString()));
+                            await deleteDoc(doc(db, 'artifacts', appId, 'users', uid, 'ventas', id.toString()));
                             this.addToast('Venta eliminada', 'error');
                         } catch(e) { console.error(e); }
                     }
@@ -1310,20 +1361,22 @@
 
                 // Lógica de Negocio: Compras / Re-inversión
                 async registrarCompra() {
-                    if (!this.user) return;
+                    const uid = this.activeUid;
+                    if (!uid) return;
                     const id = Date.now();
                     const nuevaCompra = { id, ...this.formCompra };
                     try {
-                        await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', id.toString()), nuevaCompra);
+                        await setDoc(doc(db, 'artifacts', appId, 'users', uid, 'compras', id.toString()), nuevaCompra);
                         this.formCompra = { fecha: this.formCompra.fecha, productoId: '', costo: 0, cantidad: 1 };
                         this.addToast('Re-inversión agregada al stock');
                     } catch(e) { console.error(e); }
                 },
                 async eliminarCompra(id) {
-                    if (!this.user) return;
+                    const uid = this.activeUid;
+                    if (!uid) return;
                     if(confirm('¿Seguro que deseas eliminar esta compra de inventario?')) {
                         try {
-                            await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', id.toString()));
+                            await deleteDoc(doc(db, 'artifacts', appId, 'users', uid, 'compras', id.toString()));
                             this.addToast('Inversión eliminada', 'error');
                         } catch(e) { console.error(e); }
                     }
@@ -1331,7 +1384,8 @@
 
                 // Lógica de Negocio: Productos
                 async registrarProducto() {
-                    if (!this.user) return;
+                    const uid = this.activeUid;
+                    if (!uid) return;
                     const id = Date.now();
                     const nuevoProducto = { 
                         id, 
@@ -1341,13 +1395,14 @@
                         isInsumo: this.formProducto.isInsumo
                     };
                     try {
-                        await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id.toString()), nuevoProducto);
+                        await setDoc(doc(db, 'artifacts', appId, 'users', uid, 'productos', id.toString()), nuevoProducto);
                         this.formProducto = { nombre: '', precio: 10, isInsumo: false };
                         this.addToast('Catálogo actualizado');
                     } catch(e) { console.error(e); }
                 },
                 async eliminarProducto(id) {
-                    if (!this.user) return;
+                    const uid = this.activeUid;
+                    if (!uid) return;
                     const enUso = this.ventas.some(v => v.productoId === id) || this.compras.some(c => c.productoId === id);
                     if(enUso) {
                         alert('No puedes eliminar este producto porque ya tiene ventas o inventario registrado.');
@@ -1355,7 +1410,7 @@
                     }
                     if(confirm('¿Eliminar producto del catálogo?')) {
                         try {
-                            await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id.toString()));
+                            await deleteDoc(doc(db, 'artifacts', appId, 'users', uid, 'productos', id.toString()));
                             this.addToast('Producto eliminado', 'error');
                         } catch(e) { console.error(e); }
                     }
@@ -1363,7 +1418,8 @@
 
                 // Lógica Avanzada de Base de Datos
                 async borrarTodo() {
-                    if (!this.user) return;
+                    const uid = this.activeUid;
+                    if (!uid) return;
                     if(!confirm('🚨 ¡ALERTA DE SEGURIDAD! 🚨\n\nEstás a punto de borrar TODOS tus productos, ventas e inventario. Esta acción NO se puede deshacer.\n\n¿Estás absolutamente seguro?')) return;
                     
                     const verificacion = prompt('Para confirmar que deseas eliminar toda tu información, escribe la palabra "BORRAR" (en mayúsculas):');
@@ -1374,9 +1430,9 @@
 
                     this.isProcessingBackup = true;
                     try {
-                        for(let v of this.ventas) await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', v.id.toString()));
-                        for(let c of this.compras) await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', c.id.toString()));
-                        for(let p of this.productos) await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', p.id.toString()));
+                        for(let v of this.ventas) await deleteDoc(doc(db, 'artifacts', appId, 'users', uid, 'ventas', v.id.toString()));
+                        for(let c of this.compras) await deleteDoc(doc(db, 'artifacts', appId, 'users', uid, 'compras', c.id.toString()));
+                        for(let p of this.productos) await deleteDoc(doc(db, 'artifacts', appId, 'users', uid, 'productos', p.id.toString()));
                         
                         this.addToast('Todos los datos han sido borrados de la base de datos.', 'success');
                     } catch(e) { 
@@ -1405,7 +1461,8 @@
                 },
 
                 async importarRespaldoCSV(event) {
-                    if (!this.user) return;
+                    const uid = this.activeUid;
+                    if (!uid) return;
                     const file = event.target.files[0];
                     if (!file) return;
 
@@ -1422,17 +1479,17 @@
                             const id = cols[1];
 
                             if (tipo === 'PRODUCTO') {
-                                await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id), {
+                                await setDoc(doc(db, 'artifacts', appId, 'users', uid, 'productos', id), {
                                     id: Number(id), nombre: cols[5], precio: Number(cols[7]), 
                                     isDescontinuado: cols[11] === 'true', isInsumo: cols[12] === 'true'
                                 });
                             } else if (tipo === 'VENTA') {
-                                await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', id), {
+                                await setDoc(doc(db, 'artifacts', appId, 'users', uid, 'ventas', id), {
                                     id: Number(id), fecha: cols[2], cliente: cols[3], productoId: Number(cols[4]),
                                     cantidad: Number(cols[6]), precio: Number(cols[7]), pagado: cols[9] === 'true', notas: cols[10]
                                 });
                             } else if (tipo === 'COMPRA') {
-                                await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', id), {
+                                await setDoc(doc(db, 'artifacts', appId, 'users', uid, 'compras', id), {
                                     id: Number(id), fecha: cols[2], productoId: Number(cols[4]), 
                                     cantidad: Number(cols[6]), costo: Number(cols[8])
                                 });
@@ -1464,7 +1521,8 @@
                     return parseFloat(currStr.toString().replace(/[^0-9.-]+/g,"")) || 0;
                 },
                 async procesarImportacion() {
-                    if (!this.user) {
+                    const uid = this.activeUid;
+                    if (!uid) {
                         this.addToast("Espera a que cargue la base de datos.", "error");
                         return;
                     }
@@ -1524,7 +1582,7 @@
                                 if (c && c.precioVentaCat) suggestedPrice = c.precioVentaCat;
 
                                 const newProd = { id, nombre: prodName, precio: suggestedPrice, isDescontinuado: false, isInsumo: false };
-                                await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id.toString()), newProd);
+                                await setDoc(doc(db, 'artifacts', appId, 'users', uid, 'productos', id.toString()), newProd);
                                 productMap[nameLower] = id;
                             }
                         }
@@ -1539,7 +1597,7 @@
                                 cantidad: v.cantidad, precio: v.precio,
                                 pagado: v.pagado, notas: v.notas
                             };
-                            await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', id.toString()), ventaToSave);
+                            await setDoc(doc(db, 'artifacts', appId, 'users', uid, 'ventas', id.toString()), ventaToSave);
                         }
 
                         // Guardar Stock a la Nube
@@ -1551,7 +1609,7 @@
                                 productoId: productMap[c.productoNombre.toLowerCase()],
                                 costo: c.costo, cantidad: c.cantidad
                             };
-                            await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', id.toString()), compraToSave);
+                            await setDoc(doc(db, 'artifacts', appId, 'users', uid, 'compras', id.toString()), compraToSave);
                         }
 
                         this.importVentasText = '';
@@ -1569,8 +1627,8 @@
 
                 // Configuración Firebase Auth & Listeners
                 setupListeners() {
-                    if (!this.user) return;
-                    const uid = this.user.uid;
+                    const uid = this.activeUid;
+                    if (!uid) return;
                     
                     this.unsubscribes.forEach(unsub => unsub());
                     this.unsubscribes = [];
