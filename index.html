@@ -13,7 +13,6 @@
     
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -36,50 +35,19 @@
         }
     </script>
     <style>
-        /* Variables de Sistema de Temas */
+        /* Variables de Sistema de Tema (Azul Pastel Fijo) */
         :root {
-            /* TEMA CLÁSICO (Fuchsia) */
-            --brand-light: #fdf4ff;
-            --brand-default: #d946ef;
-            --brand-dark: #a21caf;
-            --bg-main: #f9fafb;
+            --brand-light: #eff6ff; /* blue-50 */
+            --brand-default: #60a5fa; /* blue-400 */
+            --brand-dark: #3b82f6; /* blue-500 */
+            --bg-main: #f8fafc; /* slate-50 */
             --bg-card: #ffffff;
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
-            --header-1: #9333ea;
-            --header-2: #a21caf;
-            --header-text: #ffffff;
-            --border-color: #e5e7eb;
-        }
-
-        .theme-dark {
-            /* TEMA OSCURO */
-            --brand-light: #374151;
-            --brand-default: #a855f7;
-            --brand-dark: #c084fc;
-            --bg-main: #111827;
-            --bg-card: #1f2937;
-            --text-main: #f9fafb;
-            --text-muted: #9ca3af;
-            --header-1: #1f2937;
-            --header-2: #111827;
-            --header-text: #f9fafb;
-            --border-color: #374151;
-        }
-
-        .theme-pastel {
-            /* TEMA PASTEL CUSTOM */
-            --brand-light: #fff0f6;
-            --brand-default: #f472b6; 
-            --brand-dark: #db2777;
-            --bg-main: #fdf2f8; 
-            --bg-card: #ffffff;
-            --text-main: #4b5563; 
-            --text-muted: #9ca3af; 
-            --header-1: #fbcfe8; 
-            --header-2: #f9a8d4; 
-            --header-text: #831843; 
-            --border-color: #fce7f3; 
+            --text-main: #334155; /* slate-700 */
+            --text-muted: #64748b; /* slate-500 */
+            --header-1: #bfdbfe; /* blue-200 */
+            --header-2: #93c5fd; /* blue-300 */
+            --header-text: #1e3a8a; /* blue-900 */
+            --border-color: #e2e8f0; /* slate-200 */
         }
 
         /* Estilos personalizados para barras de desplazamiento */
@@ -88,8 +56,10 @@
         ::-webkit-scrollbar-thumb { background: var(--brand-default); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--brand-dark); }
         
-        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        /* Animaciones para Toasts */
+        .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
+        .toast-enter-from { opacity: 0; transform: translateX(30px); }
+        .toast-leave-to { opacity: 0; transform: translateY(-30px); }
 
         input, select, textarea {
             background-color: var(--bg-card);
@@ -99,10 +69,10 @@
     </style>
 </head>
 <body class="font-sans min-h-screen">
-    <div id="app" :class="['flex flex-col h-screen overflow-hidden transition-colors duration-300 bg-appbg text-textmain', currentThemeClass]">
+    <div id="app" class="flex flex-col h-screen overflow-hidden bg-appbg text-textmain">
         
         <!-- Header / Navegación -->
-        <header class="bg-gradient-to-r from-header1 to-header2 text-headertext shadow-md z-10 shrink-0 transition-colors duration-300 border-b border-bordercolor">
+        <header class="bg-gradient-to-r from-header1 to-header2 text-headertext shadow-sm z-10 shrink-0 border-b border-brand-default/20">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
                     <div class="flex items-center gap-3">
@@ -113,35 +83,25 @@
                     <nav class="hidden md:flex space-x-4 items-center">
                         <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id"
                             :class="['px-3 py-2 rounded-md text-sm font-medium transition-colors', 
-                                     currentTab === tab.id ? 'bg-cardbg text-brand-dark shadow-sm' : 'hover:bg-black/20 text-headertext']">
+                                     currentTab === tab.id ? 'bg-cardbg text-brand-dark shadow-sm' : 'hover:bg-white/30 text-headertext']">
                             <i :class="tab.icon + ' mr-2'"></i>{{ tab.name }}
-                        </button>
-
-                        <div class="w-px h-6 bg-headertext opacity-30 mx-2"></div>
-                        
-                        <!-- Botón Configuración -->
-                        <button @click="mostrarConfiguracion = true" class="text-headertext hover:bg-black/20 p-2 rounded-full transition-colors" title="Personalizar">
-                            <i class="fa-solid fa-palette text-xl"></i>
                         </button>
                     </nav>
 
                     <!-- Menú Móvil (Hamburguesa) -->
                     <div class="md:hidden flex items-center gap-2">
-                        <button @click="mostrarConfiguracion = true" class="text-headertext hover:text-brand-light focus:outline-none p-2">
-                            <i class="fa-solid fa-palette text-xl"></i>
-                        </button>
-                        <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-headertext hover:text-brand-light focus:outline-none p-2">
+                        <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-headertext hover:text-brand-dark focus:outline-none p-2">
                             <i class="fa-solid fa-bars text-xl"></i>
                         </button>
                     </div>
                 </div>
             </div>
             <!-- Navegación Móvil -->
-            <div v-show="mobileMenuOpen" class="md:hidden bg-header2 border-t border-black/10">
+            <div v-show="mobileMenuOpen" class="md:hidden bg-header2 border-t border-brand-dark/10">
                 <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                     <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id; mobileMenuOpen = false"
                         :class="['block w-full text-left px-3 py-2 rounded-md text-base font-medium', 
-                                 currentTab === tab.id ? 'bg-cardbg text-brand-dark' : 'text-headertext hover:bg-black/20']">
+                                 currentTab === tab.id ? 'bg-cardbg text-brand-dark' : 'text-headertext hover:bg-white/30']">
                         <i :class="tab.icon + ' mr-2'"></i>{{ tab.name }}
                     </button>
                 </div>
@@ -152,15 +112,20 @@
         <main class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
             <div class="max-w-7xl mx-auto flex flex-col min-h-full">
                 
-                <!-- Notificaciones (Mensajes flotantes) -->
-                <Transition name="fade">
-                    <div v-if="notification.show" 
-                         :class="['fixed top-20 right-4 p-4 rounded-lg shadow-lg text-white z-50 flex items-center gap-3', 
-                                  notification.type === 'success' ? 'bg-green-500' : 'bg-red-500']">
-                        <i :class="notification.type === 'success' ? 'fa-solid fa-check-circle' : 'fa-solid fa-triangle-exclamation'"></i>
-                        {{ notification.message }}
-                    </div>
-                </Transition>
+                <!-- Contenedor de Toasts (Notificaciones) -->
+                <div class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+                    <TransitionGroup name="toast">
+                        <div v-for="toast in toasts" :key="toast.id" 
+                             :class="['p-4 rounded-lg shadow-lg text-white flex items-start gap-3 w-max max-w-[90vw] sm:max-w-sm pointer-events-auto', 
+                                      toast.type === 'success' ? 'bg-emerald-500' : (toast.type === 'error' ? 'bg-rose-500' : 'bg-orange-500')]">
+                            <i :class="['mt-0.5', toast.type === 'success' ? 'fa-solid fa-check-circle' : (toast.type === 'error' ? 'fa-solid fa-circle-xmark' : 'fa-solid fa-triangle-exclamation')]"></i>
+                            <span class="font-medium text-sm leading-snug">{{ toast.message }}</span>
+                            <button @click="removeToast(toast.id)" class="ml-auto opacity-70 hover:opacity-100 pl-2">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </TransitionGroup>
+                </div>
 
                 <!-- ==================== PESTAÑA: REGISTRO DE VENTAS ==================== -->
                 <div v-show="currentTab === 'ventas'" class="space-y-6 animate-[fadeIn_0.3s_ease-in-out] flex-1">
@@ -222,7 +187,7 @@
                                     <div class="relative">
                                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-textmuted text-sm"></i>
                                         <input type="text" v-model="busquedaVentas" placeholder="Buscar cliente, producto..." class="pl-9 pr-8 py-2 rounded-md border-bordercolor shadow-sm focus:border-brand border bg-cardbg text-textmain text-sm w-full sm:w-64 transition-all">
-                                        <button v-if="busquedaVentas" @click="busquedaVentas = ''" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-textmuted hover:text-red-500">
+                                        <button v-if="busquedaVentas" @click="busquedaVentas = ''" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-textmuted hover:text-rose-500">
                                             <i class="fa-solid fa-xmark text-sm"></i>
                                         </button>
                                     </div>
@@ -267,15 +232,15 @@
                                             <td class="px-4 py-3 whitespace-nowrap text-center">
                                                 <button @click="cambiarEstadoPago(venta.id)" 
                                                     :class="['px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer transition-colors border', 
-                                                             venta.pagado ? 'bg-green-500/20 text-green-600 border-green-500/30 hover:bg-green-500/30' : 'bg-red-500/20 text-red-600 border-red-500/30 hover:bg-red-500/30']">
+                                                             venta.pagado ? 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/30' : 'bg-rose-500/20 text-rose-600 border-rose-500/30 hover:bg-rose-500/30']">
                                                     {{ venta.pagado ? 'PAGADO' : 'DEBE' }}
                                                 </button>
                                             </td>
                                             <td class="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
-                                                <button @click="abrirEdicion('venta', venta)" class="text-blue-500 hover:text-blue-700 transition-colors mr-3" title="Editar">
+                                                <button @click="abrirEdicion('venta', venta)" class="text-brand-dark hover:text-brand transition-colors mr-3" title="Editar">
                                                     <i class="fa-solid fa-pen"></i>
                                                 </button>
-                                                <button @click="eliminarVenta(venta.id)" class="text-red-500 hover:text-red-700 transition-colors" title="Eliminar">
+                                                <button @click="eliminarVenta(venta.id)" class="text-rose-500 hover:text-rose-700 transition-colors" title="Eliminar">
                                                     <i class="fa-solid fa-trash"></i>
                                                 </button>
                                             </td>
@@ -307,14 +272,14 @@
                                     <div class="flex justify-between items-center border-t border-bordercolor pt-3">
                                         <button @click="cambiarEstadoPago(venta.id)" 
                                             :class="['px-3 py-1.5 text-xs font-bold rounded-full border shadow-sm transition-colors', 
-                                                     venta.pagado ? 'bg-green-500/10 text-green-600 border-green-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30']">
+                                                     venta.pagado ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : 'bg-rose-500/10 text-rose-600 border-rose-500/30']">
                                             <i :class="venta.pagado ? 'fa-solid fa-check mr-1' : 'fa-solid fa-clock mr-1'"></i> {{ venta.pagado ? 'PAGADO' : 'DEUDA' }}
                                         </button>
                                         <div class="flex gap-2">
-                                            <button @click="abrirEdicion('venta', venta)" class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center hover:bg-blue-500/20">
+                                            <button @click="abrirEdicion('venta', venta)" class="w-8 h-8 rounded-full bg-brand-dark/10 text-brand-dark flex items-center justify-center hover:bg-brand-dark/20">
                                                 <i class="fa-solid fa-pen text-xs"></i>
                                             </button>
-                                            <button @click="eliminarVenta(venta.id)" class="w-8 h-8 rounded-full bg-red-500/10 text-red-600 flex items-center justify-center hover:bg-red-500/20">
+                                            <button @click="eliminarVenta(venta.id)" class="w-8 h-8 rounded-full bg-rose-500/10 text-rose-600 flex items-center justify-center hover:bg-rose-500/20">
                                                 <i class="fa-solid fa-trash text-xs"></i>
                                             </button>
                                         </div>
@@ -341,8 +306,8 @@
 
                     <!-- Tarjetas de Resumen -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor p-6 flex items-center border-l-4 border-l-blue-500">
-                            <div class="p-3 rounded-full bg-blue-500/20 text-blue-600 mr-4">
+                        <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor p-6 flex items-center border-l-4 border-l-brand-dark">
+                            <div class="p-3 rounded-full bg-brand-light text-brand-dark mr-4">
                                 <i class="fa-solid fa-chart-line text-2xl"></i>
                             </div>
                             <div>
@@ -350,8 +315,8 @@
                                 <p class="text-2xl font-bold text-textmain">{{ formatMoney(estadisticas.totalVentas) }}</p>
                             </div>
                         </div>
-                        <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor p-6 flex items-center border-l-4 border-l-green-500">
-                            <div class="p-3 rounded-full bg-green-500/20 text-green-600 mr-4">
+                        <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor p-6 flex items-center border-l-4 border-l-emerald-500">
+                            <div class="p-3 rounded-full bg-emerald-50 text-emerald-600 mr-4">
                                 <i class="fa-solid fa-hand-holding-dollar text-2xl"></i>
                             </div>
                             <div>
@@ -359,8 +324,8 @@
                                 <p class="text-2xl font-bold text-textmain">{{ formatMoney(estadisticas.totalPagado) }}</p>
                             </div>
                         </div>
-                        <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor p-6 flex items-center border-l-4 border-l-red-500">
-                            <div class="p-3 rounded-full bg-red-500/20 text-red-600 mr-4">
+                        <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor p-6 flex items-center border-l-4 border-l-rose-500">
+                            <div class="p-3 rounded-full bg-rose-50 text-rose-600 mr-4">
                                 <i class="fa-solid fa-book-open text-2xl"></i>
                             </div>
                             <div>
@@ -385,8 +350,8 @@
                                     <thead class="bg-appbg sticky top-0">
                                         <tr>
                                             <th class="px-4 py-2 text-left text-xs font-medium text-textmuted uppercase">Cliente</th>
-                                            <th class="px-4 py-2 text-right text-xs font-medium text-textmuted uppercase text-green-600">Pagado</th>
-                                            <th class="px-4 py-2 text-right text-xs font-medium text-textmuted uppercase text-red-600">Deuda</th>
+                                            <th class="px-4 py-2 text-right text-xs font-medium text-textmuted uppercase text-emerald-600">Pagado</th>
+                                            <th class="px-4 py-2 text-right text-xs font-medium text-textmuted uppercase text-rose-600">Deuda</th>
                                             <th class="px-4 py-2 text-right text-xs font-bold text-textmain uppercase">Total</th>
                                         </tr>
                                     </thead>
@@ -396,8 +361,8 @@
                                         </tr>
                                         <tr v-for="cliente in resumenPorCliente" :key="cliente.nombre" class="hover:bg-appbg transition-colors">
                                             <td class="px-4 py-2 text-sm font-medium text-textmain">{{ cliente.nombre }}</td>
-                                            <td class="px-4 py-2 text-sm text-right text-green-600">{{ formatMoney(cliente.pagado) }}</td>
-                                            <td class="px-4 py-2 text-sm text-right text-red-600 font-medium">{{ formatMoney(cliente.deuda) }}</td>
+                                            <td class="px-4 py-2 text-sm text-right text-emerald-600">{{ formatMoney(cliente.pagado) }}</td>
+                                            <td class="px-4 py-2 text-sm text-right text-rose-600 font-medium">{{ formatMoney(cliente.deuda) }}</td>
                                             <td class="px-4 py-2 text-sm text-right font-bold text-textmain">{{ formatMoney(cliente.total) }}</td>
                                         </tr>
                                     </tbody>
@@ -415,12 +380,12 @@
                                     <div class="flex justify-between items-center text-sm px-1">
                                         <div class="text-center">
                                             <span class="block text-xs text-textmuted uppercase">Pagado</span>
-                                            <span class="text-green-600 font-medium">{{ formatMoney(cliente.pagado) }}</span>
+                                            <span class="text-emerald-600 font-medium">{{ formatMoney(cliente.pagado) }}</span>
                                         </div>
                                         <div class="h-8 w-px bg-bordercolor"></div>
                                         <div class="text-center">
                                             <span class="block text-xs text-textmuted uppercase">Deuda</span>
-                                            <span class="text-red-600 font-bold">{{ formatMoney(cliente.deuda) }}</span>
+                                            <span class="text-rose-600 font-bold">{{ formatMoney(cliente.deuda) }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -461,7 +426,7 @@
                                 <div v-if="resumenPorProducto.length === 0" class="text-center text-textmuted py-4 bg-cardbg rounded-lg border border-bordercolor">No hay ventas registradas...</div>
                                 <div v-for="prod in resumenPorProducto" :key="'mob-prod-'+prod.id" class="bg-cardbg border border-bordercolor rounded-lg p-3 shadow-sm flex justify-between items-center">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold">
+                                        <div class="w-10 h-10 rounded-full bg-brand-light text-brand-dark flex items-center justify-center font-bold">
                                             {{ prod.cantidad }}
                                         </div>
                                         <div>
@@ -499,11 +464,11 @@
                                     </tr>
                                 </thead>
                                 <tbody class="bg-cardbg divide-y divide-bordercolor">
-                                    <tr v-for="stock in inventarioCalculado" :key="stock.id" :class="[stock.stockActual <= 2 ? 'bg-red-500/10' : 'hover:bg-appbg transition-colors']">
+                                    <tr v-for="stock in inventarioCalculado" :key="stock.id" :class="[stock.stockActual <= 3 ? 'bg-rose-500/10' : 'hover:bg-appbg transition-colors']">
                                         <td class="px-4 py-2 text-sm font-medium text-textmain">{{ stock.nombre }}</td>
                                         <td class="px-4 py-2 text-sm text-center text-textmuted">{{ stock.armadas }}</td>
                                         <td class="px-4 py-2 text-sm text-center text-textmuted">{{ stock.vendidas }}</td>
-                                        <td class="px-4 py-2 text-lg text-center font-bold" :class="stock.stockActual <= 2 ? 'text-red-600' : 'text-green-600'">
+                                        <td class="px-4 py-2 text-lg text-center font-bold" :class="stock.stockActual <= 3 ? 'text-rose-600' : 'text-emerald-600'">
                                             {{ stock.stockActual }}
                                         </td>
                                         <td class="px-4 py-2 text-sm text-right text-textmuted">{{ formatMoney(stock.inversionTotal) }}</td>
@@ -538,15 +503,15 @@
 
                             <!-- Listado Tarjetas -->
                             <div v-for="stock in inventarioCalculado" :key="'mob-stock-'+stock.id" 
-                                 :class="['bg-cardbg border rounded-xl p-4 shadow-sm relative overflow-hidden', stock.stockActual <= 2 ? 'border-red-500/50' : 'border-bordercolor']">
-                                <div v-if="stock.stockActual <= 2" class="absolute top-0 right-0 w-16 h-16 pointer-events-none overflow-hidden">
-                                    <div class="absolute transform rotate-45 bg-red-500 text-white text-[10px] font-bold py-1 right-[-35px] top-[15px] w-[120px] text-center">¡BAJO!</div>
+                                 :class="['bg-cardbg border rounded-xl p-4 shadow-sm relative overflow-hidden', stock.stockActual <= 3 ? 'border-rose-500/50' : 'border-bordercolor']">
+                                <div v-if="stock.stockActual <= 3" class="absolute top-0 right-0 w-16 h-16 pointer-events-none overflow-hidden">
+                                    <div class="absolute transform rotate-45 bg-rose-500 text-white text-[10px] font-bold py-1 right-[-35px] top-[15px] w-[120px] text-center">¡BAJO!</div>
                                 </div>
                                 <div class="flex justify-between items-start border-b border-bordercolor pb-3 mb-3">
                                     <span class="font-bold text-textmain text-lg pr-10">{{ stock.nombre }}</span>
                                     <div class="text-right shrink-0">
                                         <span class="text-xs text-textmuted block uppercase font-bold">STOCK</span>
-                                        <span :class="['text-2xl font-bold leading-none', stock.stockActual <= 2 ? 'text-red-600' : 'text-green-600']">{{ stock.stockActual }}</span>
+                                        <span :class="['text-2xl font-bold leading-none', stock.stockActual <= 3 ? 'text-rose-600' : 'text-emerald-600']">{{ stock.stockActual }}</span>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-y-3 gap-x-2 text-sm bg-appbg p-3 rounded-lg border border-bordercolor/50">
@@ -588,7 +553,7 @@
                                 <div class="bg-appbg p-3 rounded text-sm text-textmain border border-bordercolor text-center">
                                     <p>Costo x Bolsita: <strong class="text-brand text-lg block">{{ formCompra.cantidad > 0 ? formatMoney(formCompra.costo / formCompra.cantidad) : '$0.00' }}</strong></p>
                                 </div>
-                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors">
+                                <button type="submit" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-3 px-4 rounded-md transition-colors">
                                     <i class="fa-solid fa-box-open mr-2"></i>Agregar al Stock
                                 </button>
                             </form>
@@ -624,10 +589,10 @@
                                             <td class="px-4 py-2 text-center text-textmuted">{{ compra.cantidad }}</td>
                                             <td class="px-4 py-2 text-center text-textmuted">{{ formatMoney(compra.costo / compra.cantidad) }}</td>
                                             <td class="px-4 py-2 text-center whitespace-nowrap">
-                                                <button @click="abrirEdicion('compra', compra)" class="text-blue-500 hover:text-blue-700 transition-colors mr-3" title="Editar Inversión">
+                                                <button @click="abrirEdicion('compra', compra)" class="text-brand-dark hover:text-brand transition-colors mr-3" title="Editar Inversión">
                                                     <i class="fa-solid fa-pen"></i>
                                                 </button>
-                                                <button @click="eliminarCompra(compra.id)" class="text-red-500 hover:text-red-700 transition-colors" title="Eliminar Inversión">
+                                                <button @click="eliminarCompra(compra.id)" class="text-rose-500 hover:text-rose-700 transition-colors" title="Eliminar Inversión">
                                                     <i class="fa-solid fa-trash"></i>
                                                 </button>
                                             </td>
@@ -649,14 +614,14 @@
                                             <p class="text-textmuted">Inversión: <span class="font-bold text-textmain">{{ formatMoney(compra.costo) }}</span></p>
                                             <p class="text-textmuted">Bolsitas: <span class="font-medium text-textmain">{{ compra.cantidad }} un.</span></p>
                                         </div>
-                                        <div class="text-right bg-blue-500/10 p-2 rounded border border-blue-500/20">
-                                            <span class="block text-[10px] text-blue-600 uppercase font-bold">Costo c/u</span>
-                                            <span class="font-bold text-blue-700">{{ formatMoney(compra.costo / compra.cantidad) }}</span>
+                                        <div class="text-right bg-brand-light p-2 rounded border border-brand/20">
+                                            <span class="block text-[10px] text-brand-dark uppercase font-bold">Costo c/u</span>
+                                            <span class="font-bold text-brand-dark">{{ formatMoney(compra.costo / compra.cantidad) }}</span>
                                         </div>
                                     </div>
                                     <div class="flex justify-end gap-3 border-t border-bordercolor pt-3">
-                                        <button @click="abrirEdicion('compra', compra)" class="flex items-center gap-1 text-blue-500 hover:text-blue-700 text-sm font-medium bg-appbg px-3 py-1 rounded border border-bordercolor"><i class="fa-solid fa-pen text-xs"></i> Editar</button>
-                                        <button @click="eliminarCompra(compra.id)" class="flex items-center gap-1 text-red-500 hover:text-red-700 text-sm font-medium bg-appbg px-3 py-1 rounded border border-bordercolor"><i class="fa-solid fa-trash text-xs"></i> Borrar</button>
+                                        <button @click="abrirEdicion('compra', compra)" class="flex items-center gap-1 text-brand-dark hover:text-brand text-sm font-medium bg-appbg px-3 py-1 rounded border border-bordercolor"><i class="fa-solid fa-pen text-xs"></i> Editar</button>
+                                        <button @click="eliminarCompra(compra.id)" class="flex items-center gap-1 text-rose-500 hover:text-rose-700 text-sm font-medium bg-appbg px-3 py-1 rounded border border-bordercolor"><i class="fa-solid fa-trash text-xs"></i> Borrar</button>
                                     </div>
                                 </div>
                             </div>
@@ -698,10 +663,10 @@
                                         <p class="text-brand font-bold">{{ formatMoney(prod.precio) }}</p>
                                     </div>
                                     <div class="flex flex-col gap-2">
-                                        <button @click="abrirEdicion('producto', prod)" class="text-blue-500 hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100 p-2 rounded-full w-8 h-8 flex items-center justify-center border border-blue-200" title="Editar">
+                                        <button @click="abrirEdicion('producto', prod)" class="text-brand-dark hover:text-brand transition-colors bg-brand-light hover:bg-brand/20 p-2 rounded-full w-8 h-8 flex items-center justify-center border border-brand/20" title="Editar">
                                             <i class="fa-solid fa-pen text-xs"></i>
                                         </button>
-                                        <button @click="eliminarProducto(prod.id)" class="text-red-500 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100 p-2 rounded-full w-8 h-8 flex items-center justify-center border border-red-200" title="Eliminar">
+                                        <button @click="eliminarProducto(prod.id)" class="text-rose-500 hover:text-rose-700 transition-colors bg-rose-50 hover:bg-rose-100 p-2 rounded-full w-8 h-8 flex items-center justify-center border border-rose-200" title="Eliminar">
                                             <i class="fa-solid fa-trash text-xs"></i>
                                         </button>
                                     </div>
@@ -721,18 +686,18 @@
                     <div class="bg-cardbg p-6 rounded-xl shadow-sm border border-bordercolor">
                         <h2 class="text-xl font-bold text-textmain mb-4 border-b border-bordercolor pb-2"><i class="fa-solid fa-database text-brand mr-2"></i>Gestión y Respaldo de Datos</h2>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <button @click="exportarCSV" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors flex justify-center items-center">
+                            <button @click="exportarCSV" class="bg-brand hover:bg-brand-dark text-white font-bold py-3 px-4 rounded-md transition-colors flex justify-center items-center">
                                 <i class="fa-solid fa-download mr-2"></i>Exportar todo a CSV
                             </button>
                             
-                            <label class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition-colors flex justify-center items-center cursor-pointer">
+                            <label class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-md transition-colors flex justify-center items-center cursor-pointer">
                                 <i v-if="isProcessingBackup" class="fa-solid fa-spinner fa-spin mr-2"></i>
                                 <i v-else class="fa-solid fa-upload mr-2"></i>
                                 Restaurar desde CSV
                                 <input type="file" accept=".csv" class="hidden" @change="importarRespaldoCSV">
                             </label>
 
-                            <button @click="borrarTodo" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-md transition-colors flex justify-center items-center">
+                            <button @click="borrarTodo" class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-4 rounded-md transition-colors flex justify-center items-center">
                                 <i class="fa-solid fa-triangle-exclamation mr-2"></i>Borrar Todos los Datos
                             </button>
                         </div>
@@ -740,7 +705,7 @@
 
                     <!-- Sección Importar de Excel manual -->
                     <div class="bg-cardbg p-6 rounded-xl shadow-sm border border-bordercolor">
-                        <h2 class="text-xl font-bold text-textmain mb-4 border-b border-bordercolor pb-2"><i class="fa-solid fa-file-excel text-green-600 mr-2"></i>Migración Manual desde Excel</h2>
+                        <h2 class="text-xl font-bold text-textmain mb-4 border-b border-bordercolor pb-2"><i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i>Migración Manual desde Excel</h2>
                         <p class="text-textmuted mb-6">Copia las celdas directamente desde tu Excel original y pégalas en los cuadros de abajo. El sistema detectará automáticamente los productos y registrará todas tus ventas y stock en la nube.</p>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -758,7 +723,7 @@
                         
                         <button @click="procesarImportacion" :disabled="isImporting || (!importVentasText && !importComprasText)" 
                             :class="['w-full font-bold py-3 px-4 rounded-md transition-colors flex justify-center items-center', 
-                                     (isImporting || (!importVentasText && !importComprasText)) ? 'bg-bordercolor text-textmuted cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white shadow-md']">
+                                     (isImporting || (!importVentasText && !importComprasText)) ? 'bg-bordercolor text-textmuted cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md']">
                             <i v-if="isImporting" class="fa-solid fa-spinner fa-spin mr-2"></i>
                             <i v-else class="fa-solid fa-cloud-arrow-up mr-2"></i>
                             {{ isImporting ? 'Procesando y Guardando en Firebase...' : 'Procesar y Migrar Datos' }}
@@ -786,7 +751,7 @@
                         <i class="fa-solid fa-pen mr-2 text-brand"></i>
                         Editar {{ editType === 'venta' ? 'Venta' : (editType === 'compra' ? 'Inversión' : 'Producto') }}
                     </h3>
-                    <button @click="showEditModal = false" class="text-textmuted hover:text-red-500 transition-colors">
+                    <button @click="showEditModal = false" class="text-textmuted hover:text-rose-500 transition-colors">
                         <i class="fa-solid fa-xmark text-xl"></i>
                     </button>
                 </div>
@@ -839,7 +804,7 @@
                                 <input type="number" v-model.number="itemToEdit.cantidad" min="1" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
                             </div>
                         </div>
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors mt-4">Actualizar Stock</button>
+                        <button type="submit" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-3 px-4 rounded-md transition-colors mt-4">Actualizar Stock</button>
                     </form>
 
                     <!-- Formulario Edición Producto -->
@@ -852,46 +817,8 @@
                             <label class="block text-sm font-medium text-textmain">Precio Sugerido ($)</label>
                             <input type="number" v-model.number="itemToEdit.precio" step="0.5" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
                         </div>
-                        <button type="submit" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded-md transition-colors mt-4">Actualizar Producto</button>
+                        <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-4 rounded-md transition-colors mt-4">Actualizar Producto</button>
                     </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- ==================== MODAL DE CONFIGURACIÓN ==================== -->
-        <div v-if="mostrarConfiguracion" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-[fadeIn_0.2s_ease-in-out]">
-            <div class="bg-cardbg rounded-xl shadow-2xl w-full max-w-md border border-bordercolor overflow-hidden flex flex-col">
-                <div class="p-4 border-b border-bordercolor flex justify-between items-center bg-appbg">
-                    <h3 class="text-lg font-bold text-textmain"><i class="fa-solid fa-palette mr-2 text-brand"></i>Personalización</h3>
-                    <button @click="mostrarConfiguracion = false" class="text-textmuted hover:text-red-500 transition-colors">
-                        <i class="fa-solid fa-xmark text-xl"></i>
-                    </button>
-                </div>
-                
-                <div class="p-6 space-y-6">
-                    <div>
-                        <label class="block text-sm font-bold text-textmain mb-3">Tema de la Aplicación</label>
-                        <div class="grid grid-cols-3 gap-3">
-                            <button @click="cambiarTema('light')" :class="['py-3 px-2 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all', temaActual === 'light' ? 'border-brand ring-2 ring-brand ring-opacity-50 bg-brand/10' : 'border-bordercolor hover:bg-appbg']">
-                                <div class="w-8 h-8 rounded-full shadow-inner bg-gradient-to-tr from-purple-500 to-fuchsia-400"></div>
-                                <span class="text-xs font-bold text-textmain">Clásico</span>
-                            </button>
-                            <button @click="cambiarTema('dark')" :class="['py-3 px-2 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all', temaActual === 'dark' ? 'border-brand ring-2 ring-brand ring-opacity-50 bg-brand/10' : 'border-bordercolor hover:bg-appbg']">
-                                <div class="w-8 h-8 rounded-full shadow-inner bg-gradient-to-tr from-gray-800 to-gray-600"></div>
-                                <span class="text-xs font-bold text-textmain">Oscuro</span>
-                            </button>
-                            <button @click="cambiarTema('pastel')" :class="['py-3 px-2 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all', temaActual === 'pastel' ? 'border-brand ring-2 ring-brand ring-opacity-50 bg-brand/10' : 'border-bordercolor hover:bg-appbg']">
-                                <div class="w-8 h-8 rounded-full shadow-inner bg-gradient-to-tr from-pink-300 to-rose-200"></div>
-                                <span class="text-xs font-bold text-textmain">Pastel</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="p-4 bg-appbg border-t border-bordercolor text-center">
-                    <button @click="mostrarConfiguracion = false" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-3 px-4 rounded-md transition-colors">
-                        Guardar Cambios
-                    </button>
                 </div>
             </div>
         </div>
@@ -908,7 +835,6 @@
         if (typeof __firebase_config !== 'undefined') {
             firebaseConfig = JSON.parse(__firebase_config);
         } else {
-            // Usar tu configuración manual si se exporta el archivo fuera de esta plataforma
             firebaseConfig = {
                 apiKey: "AIzaSyAeRnkranTfJ-Ybbm3Skte84-xpdkxH78U",
                 authDomain: "gomithona.firebaseapp.com",
@@ -931,10 +857,7 @@
                 return {
                     user: null,
                     unsubscribes: [],
-                    // UI & Temas
-                    temaActual: 'light', // light, dark, pastel
-                    mostrarConfiguracion: false,
-
+                    
                     // Navegación
                     tabs: [
                         { id: 'ventas', name: 'Registro de Ventas', icon: 'fa-solid fa-cart-shopping' },
@@ -951,11 +874,12 @@
                     editType: '', // 'venta', 'compra', 'producto'
                     itemToEdit: {},
                     isProcessingBackup: false,
-                    filtroTiempo: 'todo', // Filtro global de tiempo (todo, semana, mes, mes_pasado)
+                    filtroTiempo: 'todo',
                     
-                    // Notificaciones
-                    notification: { show: false, message: '', type: 'success' },
-                    notificationTimeout: null,
+                    // Notificaciones (Toasts apilables)
+                    toasts: [],
+                    toastIdCounter: 0,
+                    alertedInitialStock: false,
 
                     // Bases de Datos
                     productos: [],
@@ -976,44 +900,50 @@
                     busquedaVentas: ''
                 }
             },
-            computed: {
-                // =============== TEMAS COMPUTADOS ===============
-                currentThemeClass() {
-                    if (this.temaActual === 'dark') return 'theme-dark';
-                    if (this.temaActual === 'pastel') return 'theme-pastel';
-                    return ''; // Default es 'light' (variables raíz)
-                },
+            watch: {
+                inventarioCalculado(newVal) {
+                    // Esperamos a que haya datos
+                    if (this.alertedInitialStock || newVal.length === 0) return;
+                    
+                    // Pequeño retraso para asegurar que compras y ventas terminaron de sincronizar desde Firebase
+                    setTimeout(() => {
+                        if (this.alertedInitialStock) return;
+                        this.alertedInitialStock = true; // Solo alertamos 1 vez por sesión
 
+                        // Productos con 3 o menos de stock
+                        const lowStockItems = this.inventarioCalculado.filter(item => item.stockActual <= 3).map(item => item.nombre);
+                        
+                        if (lowStockItems.length > 0) {
+                            const formatter = new Intl.ListFormat('es', { style: 'long', type: 'conjunction' });
+                            const nombres = formatter.format(lowStockItems);
+                            
+                            this.addToast(`⚠️ Hey, se están acabando: ${nombres}, ¡toca re-inversión!`, 'warning');
+                        }
+                    }, 1500);
+                }
+            },
+            computed: {
                 // =============== FILTRO DE TIEMPO ===============
                 ventasFiltradas() {
                     if (this.filtroTiempo === 'todo') return this.ventas;
                     
                     const hoy = new Date();
-                    const diaSemana = hoy.getDay() || 7; // Lunes = 1 ... Domingo = 7
+                    const diaSemana = hoy.getDay() || 7; 
                     
-                    // Calcular rangos para "Esta Semana"
                     const inicioSemana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - diaSemana + 1);
                     const finSemana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + (7 - diaSemana), 23, 59, 59);
 
                     return this.ventas.filter(v => {
                         if (!v.fecha) return false;
-                        // Separar la fecha evitando problemas de zonas horarias en la conversión
                         const [y, m, d] = v.fecha.split('-');
                         const fechaVenta = new Date(y, m - 1, d);
 
-                        if (this.filtroTiempo === 'semana') {
-                            return fechaVenta >= inicioSemana && fechaVenta <= finSemana;
-                        }
-                        if (this.filtroTiempo === 'mes') {
-                            return fechaVenta.getMonth() === hoy.getMonth() && fechaVenta.getFullYear() === hoy.getFullYear();
-                        }
+                        if (this.filtroTiempo === 'semana') return fechaVenta >= inicioSemana && fechaVenta <= finSemana;
+                        if (this.filtroTiempo === 'mes') return fechaVenta.getMonth() === hoy.getMonth() && fechaVenta.getFullYear() === hoy.getFullYear();
                         if (this.filtroTiempo === 'mes_pasado') {
                             let mesPasado = hoy.getMonth() - 1;
                             let anio = hoy.getFullYear();
-                            if (mesPasado < 0) {
-                                mesPasado = 11;
-                                anio--;
-                            }
+                            if (mesPasado < 0) { mesPasado = 11; anio--; }
                             return fechaVenta.getMonth() === mesPasado && fechaVenta.getFullYear() === anio;
                         }
                         return true;
@@ -1022,17 +952,12 @@
 
                 // =============== DASHBOARD COMPUTADOS ===============
                 estadisticas() {
-                    let totalVentas = 0;
-                    let totalPagado = 0;
-                    let totalDeuda = 0;
-                    
+                    let totalVentas = 0; let totalPagado = 0; let totalDeuda = 0;
                     this.ventasFiltradas.forEach(v => {
                         const total = v.cantidad * v.precio;
                         totalVentas += total;
-                        if (v.pagado) totalPagado += total;
-                        else totalDeuda += total;
+                        if (v.pagado) totalPagado += total; else totalDeuda += total;
                     });
-                    
                     return { totalVentas, totalPagado, totalDeuda };
                 },
                 resumenPorCliente() {
@@ -1043,8 +968,7 @@
                         if (!mapa[nombre]) mapa[nombre] = { nombre, pagado: 0, deuda: 0, total: 0 };
                         
                         mapa[nombre].total += total;
-                        if (v.pagado) mapa[nombre].pagado += total;
-                        else mapa[nombre].deuda += total;
+                        if (v.pagado) mapa[nombre].pagado += total; else mapa[nombre].deuda += total;
                     });
                     return Object.values(mapa).sort((a, b) => b.deuda - a.deuda || b.total - a.total);
                 },
@@ -1061,7 +985,6 @@
                 },
                 
                 // =============== INVENTARIO COMPUTADOS ===============
-                // El inventario SIEMPRE usa todo el historial para calcular el stock físico real
                 inventarioCalculado() {
                     return this.productos.map(prod => {
                         const misCompras = this.compras.filter(c => c.productoId === prod.id);
@@ -1076,22 +999,15 @@
                         const gananciaLibre = ingresoEsperadoTotal - inversionTotal;
 
                         return {
-                            id: prod.id,
-                            nombre: prod.nombre,
-                            armadas,
-                            vendidas,
-                            stockActual,
-                            inversionTotal,
-                            gananciaLibre
+                            id: prod.id, nombre: prod.nombre, armadas, vendidas,
+                            stockActual, inversionTotal, gananciaLibre
                         };
                     }).filter(item => item.armadas > 0 || item.vendidas > 0);
                 },
                 totalesInventario() {
                     return this.inventarioCalculado.reduce((totales, item) => {
-                        totales.armadas += item.armadas;
-                        totales.vendidas += item.vendidas;
-                        totales.stock += item.stockActual;
-                        totales.inversion += item.inversionTotal;
+                        totales.armadas += item.armadas; totales.vendidas += item.vendidas;
+                        totales.stock += item.stockActual; totales.inversion += item.inversionTotal;
                         totales.ganancia += item.gananciaLibre;
                         return totales;
                     }, { armadas: 0, vendidas: 0, stock: 0, inversion: 0, ganancia: 0 });
@@ -1100,7 +1016,6 @@
                 // =============== UTILIDADES ORDEN Y BÚSQUEDA ===============
                 ventasOrdenadas() {
                     let resultado = [...this.ventasFiltradas];
-                    
                     if (this.busquedaVentas.trim() !== '') {
                         const termino = this.busquedaVentas.toLowerCase().trim();
                         resultado = resultado.filter(v => {
@@ -1110,7 +1025,6 @@
                             return nombreCliente.includes(termino) || nombreProducto.includes(termino) || notas.includes(termino);
                         });
                     }
-                    
                     return resultado.sort((a, b) => new Date(b.fecha) - new Date(a.fecha) || b.id - a.id);
                 },
                 comprasOrdenadas() {
@@ -1118,13 +1032,16 @@
                 }
             },
             methods: {
-                // UI y Temas
-                cambiarTema(tema) {
-                    this.temaActual = tema;
-                    localStorage.setItem('gomithona_theme', tema);
+                // Utilidades & Toasts
+                addToast(message, type = 'success') {
+                    const id = this.toastIdCounter++;
+                    this.toasts.push({ id, message, type });
+                    // Remover automáticamente después de 4.5 segundos
+                    setTimeout(() => { this.removeToast(id); }, 4500);
                 },
-                
-                // Utilidades
+                removeToast(id) {
+                    this.toasts = this.toasts.filter(t => t.id !== id);
+                },
                 formatMoney(value) {
                     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value || 0);
                 },
@@ -1137,18 +1054,11 @@
                     const prod = this.productos.find(p => p.id === id);
                     return prod ? prod.nombre : 'Producto Eliminado';
                 },
-                mostrarNotificacion(mensaje, tipo = 'success') {
-                    this.notification.message = mensaje;
-                    this.notification.type = tipo;
-                    this.notification.show = true;
-                    if(this.notificationTimeout) clearTimeout(this.notificationTimeout);
-                    this.notificationTimeout = setTimeout(() => { this.notification.show = false; }, 3000);
-                },
 
                 // Lógica Global de Edición
                 abrirEdicion(tipo, item) {
                     this.editType = tipo;
-                    this.itemToEdit = { ...item }; // Copia para no mutar directamente hasta guardar
+                    this.itemToEdit = { ...item }; 
                     this.showEditModal = true;
                 },
                 async guardarEdicion() {
@@ -1157,10 +1067,10 @@
                         const coleccionName = this.editType === 'venta' ? 'ventas' : (this.editType === 'compra' ? 'compras' : 'productos');
                         await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, coleccionName, this.itemToEdit.id.toString()), this.itemToEdit, { merge: true });
                         this.showEditModal = false;
-                        this.mostrarNotificacion('Registro actualizado correctamente');
+                        this.addToast('Registro actualizado correctamente');
                     } catch(e) {
                         console.error(e);
-                        this.mostrarNotificacion('Error al guardar cambios', 'error');
+                        this.addToast('Error al guardar cambios', 'error');
                     }
                 },
 
@@ -1176,8 +1086,8 @@
                     try {
                         await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', id.toString()), nuevaVenta);
                         this.formVenta = { fecha: this.formVenta.fecha, cliente: '', productoId: '', cantidad: 1, precio: 0, pagado: false, notas: '' };
-                        this.mostrarNotificacion('Venta registrada con éxito');
-                    } catch(e) { console.error(e); this.mostrarNotificacion('Error al guardar', 'error'); }
+                        this.addToast('Venta registrada con éxito');
+                    } catch(e) { console.error(e); this.addToast('Error al guardar', 'error'); }
                 },
                 async cambiarEstadoPago(id) {
                     if (!this.user) return;
@@ -1193,7 +1103,7 @@
                     if(confirm('¿Estás seguro de eliminar esta venta? Esto afectará tu caja y stock.')) {
                         try {
                             await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', id.toString()));
-                            this.mostrarNotificacion('Venta eliminada', 'error');
+                            this.addToast('Venta eliminada', 'error');
                         } catch(e) { console.error(e); }
                     }
                 },
@@ -1206,7 +1116,7 @@
                     try {
                         await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', id.toString()), nuevaCompra);
                         this.formCompra = { fecha: this.formCompra.fecha, productoId: '', costo: 0, cantidad: 1 };
-                        this.mostrarNotificacion('Re-inversión agregada al stock');
+                        this.addToast('Re-inversión agregada al stock');
                     } catch(e) { console.error(e); }
                 },
                 async eliminarCompra(id) {
@@ -1214,7 +1124,7 @@
                     if(confirm('¿Seguro que deseas eliminar esta compra de inventario?')) {
                         try {
                             await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', id.toString()));
-                            this.mostrarNotificacion('Inversión eliminada', 'error');
+                            this.addToast('Inversión eliminada', 'error');
                         } catch(e) { console.error(e); }
                     }
                 },
@@ -1227,7 +1137,7 @@
                     try {
                         await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id.toString()), nuevoProducto);
                         this.formProducto = { nombre: '', precio: 10 };
-                        this.mostrarNotificacion('Producto añadido al catálogo');
+                        this.addToast('Producto añadido al catálogo');
                     } catch(e) { console.error(e); }
                 },
                 async eliminarProducto(id) {
@@ -1240,7 +1150,7 @@
                     if(confirm('¿Eliminar producto del catálogo?')) {
                         try {
                             await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id.toString()));
-                            this.mostrarNotificacion('Producto eliminada', 'error');
+                            this.addToast('Producto eliminada', 'error');
                         } catch(e) { console.error(e); }
                     }
                 },
@@ -1252,7 +1162,7 @@
                     
                     const verificacion = prompt('Para confirmar que deseas eliminar toda tu información, escribe la palabra "BORRAR" (en mayúsculas):');
                     if (verificacion !== 'BORRAR') {
-                        this.mostrarNotificacion('Operación cancelada. Datos a salvo.', 'success');
+                        this.addToast('Operación cancelada. Datos a salvo.', 'success');
                         return;
                     }
 
@@ -1262,28 +1172,21 @@
                         for(let c of this.compras) await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', c.id.toString()));
                         for(let p of this.productos) await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', p.id.toString()));
                         
-                        this.mostrarNotificacion('Todos los datos han sido borrados de la base de datos.', 'success');
+                        this.addToast('Todos los datos han sido borrados de la base de datos.', 'success');
                     } catch(e) { 
                         console.error(e); 
-                        this.mostrarNotificacion('Ocurrió un error al borrar', 'error');
+                        this.addToast('Ocurrió un error al borrar', 'error');
                     }
                     this.isProcessingBackup = false;
                 },
 
                 exportarCSV() {
-                    // Crea un CSV unificado para respaldo
                     const escape = (str) => `"${String(str || '').replace(/"/g, '""')}"`;
                     let csv = "TIPO,ID,FECHA,CLIENTE,PRODUCTO_ID,NOMBRE_PRODUCTO,CANTIDAD,PRECIO,COSTO,PAGADO,NOTAS\n";
                     
-                    this.productos.forEach(p => {
-                        csv += `PRODUCTO,${p.id},,,,${escape(p.nombre)},,${p.precio},,,\n`;
-                    });
-                    this.ventas.forEach(v => {
-                        csv += `VENTA,${v.id},${v.fecha},${escape(v.cliente)},${v.productoId},,${v.cantidad},${v.precio},,${v.pagado},${escape(v.notas)}\n`;
-                    });
-                    this.compras.forEach(c => {
-                        csv += `COMPRA,${c.id},${c.fecha},,${c.productoId},,${c.cantidad},,,${c.costo},,\n`;
-                    });
+                    this.productos.forEach(p => { csv += `PRODUCTO,${p.id},,,,${escape(p.nombre)},,${p.precio},,,\n`; });
+                    this.ventas.forEach(v => { csv += `VENTA,${v.id},${v.fecha},${escape(v.cliente)},${v.productoId},,${v.cantidad},${v.precio},,${v.pagado},${escape(v.notas)}\n`; });
+                    this.compras.forEach(c => { csv += `COMPRA,${c.id},${c.fecha},,${c.productoId},,${c.cantidad},,,${c.costo},,\n`; });
 
                     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                     const link = document.createElement("a");
@@ -1292,7 +1195,7 @@
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
-                    this.mostrarNotificacion('Respaldo CSV descargado');
+                    this.addToast('Respaldo CSV descargado');
                 },
 
                 async importarRespaldoCSV(event) {
@@ -1305,8 +1208,7 @@
                         const text = await file.text();
                         const lineas = text.trim().split('\n');
                         
-                        for (let i = 1; i < lineas.length; i++) { // Salta cabeceras
-                            // Separar por comas respetando comillas (regex básico para CSV)
+                        for (let i = 1; i < lineas.length; i++) { 
                             const cols = lineas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(col => col.replace(/^"|"$/g, '').trim());
                             if(cols.length < 1) continue;
 
@@ -1329,13 +1231,13 @@
                                 });
                             }
                         }
-                        this.mostrarNotificacion('Respaldo restaurado con éxito');
+                        this.addToast('Respaldo restaurado con éxito');
                     } catch (error) {
                         console.error(error);
-                        this.mostrarNotificacion('El archivo CSV no tiene el formato correcto de respaldo.', 'error');
+                        this.addToast('El archivo CSV no tiene el formato correcto de respaldo.', 'error');
                     }
                     this.isProcessingBackup = false;
-                    event.target.value = ''; // Limpiar input file
+                    event.target.value = '';
                 },
 
                 // Lógica de Migración Excel
@@ -1356,7 +1258,7 @@
                 },
                 async procesarImportacion() {
                     if (!this.user) {
-                        this.mostrarNotificacion("Espera a que cargue la base de datos.", "error");
+                        this.addToast("Espera a que cargue la base de datos.", "error");
                         return;
                     }
                     this.isImporting = true;
@@ -1370,8 +1272,8 @@
 
                         // Extraer Ventas
                         for(let line of ventasLines) {
-                            const cols = line.split('\t'); // Excel separa columnas por Tabulador
-                            if(cols.length < 4 || cols[0].toLowerCase().includes('fecha')) continue; // Ignorar encabezados
+                            const cols = line.split('\t');
+                            if(cols.length < 4 || cols[0].toLowerCase().includes('fecha')) continue;
                             const nombreProd = cols[2].trim();
                             uniqueProducts.add(nombreProd);
                             parsedVentas.push({
@@ -1402,11 +1304,9 @@
 
                         // Mapear y crear productos faltantes automáticamente
                         let productMap = {}; 
-                        for(let p of this.productos) {
-                            productMap[p.nombre.toLowerCase()] = p.id;
-                        }
+                        for(let p of this.productos) { productMap[p.nombre.toLowerCase()] = p.id; }
 
-                        let timeOffset = 0; // Para generar IDs únicos
+                        let timeOffset = 0; 
                         for(let prodName of uniqueProducts) {
                             const nameLower = prodName.toLowerCase();
                             if(!productMap[nameLower]) {
@@ -1447,17 +1347,16 @@
                             await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', id.toString()), compraToSave);
                         }
 
-                        // Limpiar formulario y cambiar de pestaña
                         this.importVentasText = '';
                         this.importComprasText = '';
                         this.isImporting = false;
                         this.currentTab = 'dashboard';
-                        this.mostrarNotificacion("¡Migración completada con éxito!");
+                        this.addToast("¡Migración completada con éxito!");
 
                     } catch (error) {
                         console.error(error);
                         this.isImporting = false;
-                        this.mostrarNotificacion("Error al procesar. Verifica que copiaste bien las columnas.", "error");
+                        this.addToast("Error al procesar. Verifica que copiaste bien las columnas.", "error");
                     }
                 },
 
@@ -1498,15 +1397,11 @@
                         }
                     } catch (error) {
                         console.error("Error Auth:", error);
-                        this.mostrarNotificacion("Error al conectar a la base de datos", "error");
+                        this.addToast("Error al conectar a la base de datos", "error");
                     }
                 }
             },
             mounted() {
-                // Cargar tema guardado
-                const savedTheme = localStorage.getItem('gomithona_theme');
-                if (savedTheme) this.temaActual = savedTheme;
-
                 onAuthStateChanged(auth, (user) => {
                     this.user = user;
                     if (user) {
