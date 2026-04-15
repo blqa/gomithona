@@ -217,7 +217,15 @@
                         <div class="bg-cardbg rounded-xl shadow-sm border border-bordercolor flex-1 flex flex-col overflow-hidden">
                             <div class="p-4 border-b border-bordercolor flex justify-between items-center bg-appbg flex-wrap gap-3">
                                 <h2 class="text-xl font-bold text-textmain">Historial de Ventas</h2>
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-3 flex-wrap">
+                                    <!-- Buscador Inteligente -->
+                                    <div class="relative">
+                                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-textmuted text-sm"></i>
+                                        <input type="text" v-model="busquedaVentas" placeholder="Buscar cliente, producto..." class="pl-9 pr-8 py-2 rounded-md border-bordercolor shadow-sm focus:border-brand border bg-cardbg text-textmain text-sm w-full sm:w-64 transition-all">
+                                        <button v-if="busquedaVentas" @click="busquedaVentas = ''" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-textmuted hover:text-red-500">
+                                            <i class="fa-solid fa-xmark text-sm"></i>
+                                        </button>
+                                    </div>
                                     <!-- Selector de Fecha Global -->
                                     <select v-model="filtroTiempo" class="rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain text-sm font-medium">
                                         <option value="todo">Todos los tiempos</option>
@@ -225,7 +233,7 @@
                                         <option value="mes">Este Mes</option>
                                         <option value="mes_pasado">Mes Pasado</option>
                                     </select>
-                                    <span class="text-sm text-textmuted whitespace-nowrap">{{ ventasFiltradas.length }} registros</span>
+                                    <span class="text-sm text-textmuted whitespace-nowrap">{{ ventasOrdenadas.length }} registros</span>
                                 </div>
                             </div>
                             <div class="overflow-x-auto p-0 flex-1">
@@ -814,7 +822,10 @@
                     // Formularios
                     formVenta: { fecha: new Date().toISOString().split('T')[0], cliente: '', productoId: '', cantidad: 1, precio: 0, pagado: false, notas: '' },
                     formCompra: { fecha: new Date().toISOString().split('T')[0], productoId: '', costo: 0, cantidad: 1 },
-                    formProducto: { nombre: '', precio: 10 }
+                    formProducto: { nombre: '', precio: 10 },
+                    
+                    // Búsqueda
+                    busquedaVentas: ''
                 }
             },
             computed: {
@@ -938,9 +949,21 @@
                     }, { armadas: 0, vendidas: 0, stock: 0, inversion: 0, ganancia: 0 });
                 },
 
-                // =============== UTILIDADES ORDEN ===============
+                // =============== UTILIDADES ORDEN Y BÚSQUEDA ===============
                 ventasOrdenadas() {
-                    return [...this.ventasFiltradas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha) || b.id - a.id);
+                    let resultado = [...this.ventasFiltradas];
+                    
+                    if (this.busquedaVentas.trim() !== '') {
+                        const termino = this.busquedaVentas.toLowerCase().trim();
+                        resultado = resultado.filter(v => {
+                            const nombreCliente = (v.cliente || '').toLowerCase();
+                            const nombreProducto = (this.obtenerNombreProducto(v.productoId) || '').toLowerCase();
+                            const notas = (v.notas || '').toLowerCase();
+                            return nombreCliente.includes(termino) || nombreProducto.includes(termino) || notas.includes(termino);
+                        });
+                    }
+                    
+                    return resultado.sort((a, b) => new Date(b.fecha) - new Date(a.fecha) || b.id - a.id);
                 },
                 comprasOrdenadas() {
                     return [...this.compras].sort((a, b) => new Date(b.fecha) - new Date(a.fecha) || b.id - a.id);
