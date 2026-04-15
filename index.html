@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GomiThoNa - Sistema de Gestión</title>
+    <!-- Tailwind CSS para los estilos modernos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para los íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Vue 3 para la reactividad y la lógica sin romper fórmulas -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            light: '#fdf4ff', // fuchsia-50
+                            DEFAULT: '#d946ef', // fuchsia-500
+                            dark: '#a21caf', // fuchsia-700
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos personalizados para barras de desplazamiento */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #d946ef; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a21caf; }
+        
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
+    <div id="app" class="flex flex-col h-screen overflow-hidden">
+        
+        <!-- Header / Navegación -->
+        <header class="bg-gradient-to-r from-purple-600 to-brand-dark text-white shadow-md z-10 shrink-0">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-candy-cane text-2xl"></i>
+                        <span class="font-bold text-2xl tracking-wider">GomiThoNa</span>
+                    </div>
+                    <!-- Navegación Desktop -->
+                    <nav class="hidden md:flex space-x-4">
+                        <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id"
+                            :class="['px-3 py-2 rounded-md text-sm font-medium transition-colors', 
+                                     currentTab === tab.id ? 'bg-white text-purple-700' : 'hover:bg-purple-500 hover:text-white']">
+                            <i :class="tab.icon + ' mr-2'"></i>{{ tab.name }}
+                        </button>
+                    </nav>
+                    <!-- Menú Móvil (Hamburguesa) -->
+                    <div class="md:hidden">
+                        <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-white hover:text-brand-light focus:outline-none p-2">
+                            <i class="fa-solid fa-bars text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Navegación Móvil -->
+            <div v-show="mobileMenuOpen" class="md:hidden bg-purple-700">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id; mobileMenuOpen = false"
+                        :class="['block w-full text-left px-3 py-2 rounded-md text-base font-medium', 
+                                 currentTab === tab.id ? 'bg-white text-purple-700' : 'text-white hover:bg-purple-600']">
+                        <i :class="tab.icon + ' mr-2'"></i>{{ tab.name }}
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenido Principal -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+            <div class="max-w-7xl mx-auto">
+                
+                <!-- Notificaciones (Mensajes flotantes) -->
+                <Transition name="fade">
+                    <div v-if="notification.show" 
+                         :class="['fixed top-20 right-4 p-4 rounded-lg shadow-lg text-white z-50 flex items-center gap-3', 
+                                  notification.type === 'success' ? 'bg-green-500' : 'bg-red-500']">
+                        <i :class="notification.type === 'success' ? 'fa-solid fa-check-circle' : 'fa-solid fa-triangle-exclamation'"></i>
+                        {{ notification.message }}
+                    </div>
+                </Transition>
+
+                <!-- ==================== PESTAÑA: REGISTRO DE VENTAS ==================== -->
+                <div v-show="currentTab === 'ventas'" class="space-y-6 animate-[fadeIn_0.3s_ease-in-out]">
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <!-- Formulario de Nueva Venta -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 md:w-1/3 shrink-0">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Registrar Venta</h2>
+                            <form @submit.prevent="registrarVenta" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Fecha</label>
+                                    <input type="date" v-model="formVenta.fecha" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Cliente</label>
+                                    <input type="text" v-model="formVenta.cliente" placeholder="Ej. Juan, Alma..." required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Producto</label>
+                                    <select v-model="formVenta.productoId" @change="actualizarPrecioVenta" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border">
+                                        <option value="" disabled>Selecciona un producto...</option>
+                                        <option v-for="prod in productos" :key="prod.id" :value="prod.id">
+                                            {{ prod.nombre }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="flex gap-4">
+                                    <div class="w-1/2">
+                                        <label class="block text-sm font-medium text-gray-700">Cantidad</label>
+                                        <input type="number" v-model.number="formVenta.cantidad" min="1" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border">
+                                    </div>
+                                    <div class="w-1/2">
+                                        <label class="block text-sm font-medium text-gray-700">Precio Unit. ($)</label>
+                                        <input type="number" v-model.number="formVenta.precio" step="0.5" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Total: <span class="text-lg font-bold text-brand">{{ formatMoney(formVenta.cantidad * formVenta.precio) }}</span></label>
+                                </div>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <input type="checkbox" id="pago" v-model="formVenta.pagado" class="h-4 w-4 text-brand focus:ring-brand border-gray-300 rounded">
+                                    <label for="pago" class="text-sm font-medium text-gray-700">¿Ya pagó?</label>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Notas (Opcional)</label>
+                                    <input type="text" v-model="formVenta.notas" placeholder="Ej. Paga el 14/04" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border">
+                                </div>
+                                <button type="submit" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-2 px-4 rounded-md transition-colors">
+                                    <i class="fa-solid fa-plus mr-2"></i>Guardar Venta
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Tabla de Ventas Recientes -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden">
+                            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                                <h2 class="text-xl font-bold text-gray-800">Historial de Ventas</h2>
+                                <span class="text-sm text-gray-500">{{ ventas.length }} registros</span>
+                            </div>
+                            <div class="overflow-x-auto p-0 flex-1">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-100 sticky top-0">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
+                                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Cant</th>
+                                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr v-if="ventas.length === 0">
+                                            <td colspan="7" class="px-4 py-8 text-center text-gray-500">No hay ventas registradas aún.</td>
+                                        </tr>
+                                        <tr v-for="venta in ventasOrdenadas" :key="venta.id" class="hover:bg-gray-50">
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{{ formatearFecha(venta.fecha) }}</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ venta.cliente }}</td>
+                                            <td class="px-4 py-3 text-sm text-gray-600">
+                                                {{ obtenerNombreProducto(venta.productoId) }}
+                                                <div v-if="venta.notas" class="text-xs text-gray-400 italic">{{ venta.notas }}</div>
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-center">{{ venta.cantidad }}</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-800 text-right">{{ formatMoney(venta.cantidad * venta.precio) }}</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-center">
+                                                <button @click="cambiarEstadoPago(venta.id)" 
+                                                    :class="['px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer transition-colors', 
+                                                             venta.pagado ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200']">
+                                                    {{ venta.pagado ? 'PAGADO' : 'DEBE' }}
+                                                </button>
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
+                                                <button @click="eliminarVenta(venta.id)" class="text-red-500 hover:text-red-700" title="Eliminar">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== PESTAÑA: DASHBOARD ==================== -->
+                <div v-show="currentTab === 'dashboard'" class="space-y-6 animate-[fadeIn_0.3s_ease-in-out]">
+                    <!-- Tarjetas de Resumen -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center border-l-4 border-blue-500">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                                <i class="fa-solid fa-chart-line text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 uppercase">Ventas Totales</p>
+                                <p class="text-2xl font-bold text-gray-900">{{ formatMoney(estadisticas.totalVentas) }}</p>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center border-l-4 border-green-500">
+                            <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                                <i class="fa-solid fa-hand-holding-dollar text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 uppercase">Dinero Recibido (Pagado)</p>
+                                <p class="text-2xl font-bold text-gray-900">{{ formatMoney(estadisticas.totalPagado) }}</p>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center border-l-4 border-red-500">
+                            <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4">
+                                <i class="fa-solid fa-book-open text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 uppercase">Por Cobrar (Deudas)</p>
+                                <p class="text-2xl font-bold text-gray-900">{{ formatMoney(estadisticas.totalDeuda) }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tablas de Resumen (Por Producto y Por Cliente) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        <!-- Resumen por Cliente -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div class="p-4 border-b bg-gray-50">
+                                <h3 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-users mr-2 text-brand"></i>Estado por Clientes</h3>
+                            </div>
+                            <div class="p-0 overflow-x-auto max-h-96 overflow-y-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-100 sticky top-0">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase text-green-600">Pagado</th>
+                                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase text-red-600">Deuda</th>
+                                            <th class="px-4 py-2 text-right text-xs font-bold text-gray-700 uppercase">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200">
+                                        <tr v-for="cliente in resumenPorCliente" :key="cliente.nombre" class="hover:bg-gray-50">
+                                            <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ cliente.nombre }}</td>
+                                            <td class="px-4 py-2 text-sm text-right text-green-600">{{ formatMoney(cliente.pagado) }}</td>
+                                            <td class="px-4 py-2 text-sm text-right text-red-600 font-medium">{{ formatMoney(cliente.deuda) }}</td>
+                                            <td class="px-4 py-2 text-sm text-right font-bold text-gray-800">{{ formatMoney(cliente.total) }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Resumen por Producto -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div class="p-4 border-b bg-gray-50">
+                                <h3 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-candy-cane mr-2 text-brand"></i>Ventas por Producto</h3>
+                            </div>
+                            <div class="p-0 overflow-x-auto max-h-96 overflow-y-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-100 sticky top-0">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Vendidos</th>
+                                            <th class="px-4 py-2 text-right text-xs font-bold text-gray-700 uppercase">Ingreso Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200">
+                                        <tr v-for="prod in resumenPorProducto" :key="prod.id" class="hover:bg-gray-50">
+                                            <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ prod.nombre }}</td>
+                                            <td class="px-4 py-2 text-sm text-center text-gray-600">{{ prod.cantidad }} un.</td>
+                                            <td class="px-4 py-2 text-sm text-right font-bold text-brand">{{ formatMoney(prod.total) }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== PESTAÑA: STOCK E INVENTARIO ==================== -->
+                <div v-show="currentTab === 'inventario'" class="space-y-6 animate-[fadeIn_0.3s_ease-in-out]">
+                    
+                    <!-- Resumen General Stock -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                            <h2 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-boxes-stacked mr-2 text-brand"></i>Control de Stock Actual</h2>
+                        </div>
+                        <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-purple-50 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-bold text-purple-800 uppercase">Producto</th>
+                                        <th class="px-4 py-3 text-center text-xs font-bold text-purple-800 uppercase" title="Total producido o invertido">Bolsitas<br>Armadas</th>
+                                        <th class="px-4 py-3 text-center text-xs font-bold text-purple-800 uppercase">Vendidas</th>
+                                        <th class="px-4 py-3 text-center text-xs font-bold text-purple-800 uppercase bg-purple-100">STOCK ACTUAL</th>
+                                        <th class="px-4 py-3 text-right text-xs font-bold text-purple-800 uppercase">Inversión<br>Total</th>
+                                        <th class="px-4 py-3 text-right text-xs font-bold text-purple-800 uppercase">Ganancia<br>Esperada</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr v-for="stock in inventarioCalculado" :key="stock.id" :class="{'bg-red-50': stock.stockActual <= 2}">
+                                        <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ stock.nombre }}</td>
+                                        <td class="px-4 py-2 text-sm text-center text-gray-600">{{ stock.armadas }}</td>
+                                        <td class="px-4 py-2 text-sm text-center text-gray-600">{{ stock.vendidas }}</td>
+                                        <td class="px-4 py-2 text-lg text-center font-bold" :class="stock.stockActual <= 2 ? 'text-red-600' : 'text-green-600'">
+                                            {{ stock.stockActual }}
+                                        </td>
+                                        <td class="px-4 py-2 text-sm text-right text-gray-600">{{ formatMoney(stock.inversionTotal) }}</td>
+                                        <td class="px-4 py-2 text-sm text-right text-brand font-medium">{{ formatMoney(stock.gananciaLibre) }}</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot class="bg-gray-100 font-bold sticky bottom-0">
+                                    <tr>
+                                        <td class="px-4 py-3 text-right">TOTALES:</td>
+                                        <td class="px-4 py-3 text-center">{{ totalesInventario.armadas }}</td>
+                                        <td class="px-4 py-3 text-center">{{ totalesInventario.vendidas }}</td>
+                                        <td class="px-4 py-3 text-center">{{ totalesInventario.stock }}</td>
+                                        <td class="px-4 py-3 text-right text-gray-700">{{ formatMoney(totalesInventario.inversion) }}</td>
+                                        <td class="px-4 py-3 text-right text-brand">{{ formatMoney(totalesInventario.ganancia) }}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <!-- Formulario de Nueva Inversión / Lote -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 md:w-1/3 shrink-0">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Registrar Re-Inversión (Lote)</h3>
+                            <form @submit.prevent="registrarCompra" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Fecha</label>
+                                    <input type="date" v-model="formCompra.fecha" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Producto</label>
+                                    <select v-model="formCompra.productoId" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border">
+                                        <option value="" disabled>Selecciona producto...</option>
+                                        <option v-for="prod in productos" :key="prod.id" :value="prod.id">{{ prod.nombre }}</option>
+                                    </select>
+                                </div>
+                                <div class="flex gap-4">
+                                    <div class="w-1/2">
+                                        <label class="block text-sm font-medium text-gray-700" title="Costo total de la materia prima">Inversión ($)</label>
+                                        <input type="number" v-model.number="formCompra.costo" step="0.5" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border">
+                                    </div>
+                                    <div class="w-1/2">
+                                        <label class="block text-sm font-medium text-gray-700">Bolsitas Resultantes</label>
+                                        <input type="number" v-model.number="formCompra.cantidad" min="1" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border">
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded text-sm text-gray-700 border">
+                                    <p>Costo x Bolsita: <strong class="text-brand">{{ formCompra.cantidad > 0 ? formatMoney(formCompra.costo / formCompra.cantidad) : '$0.00' }}</strong></p>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+                                    <i class="fa-solid fa-box-open mr-2"></i>Agregar al Stock
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Historial de Compras/Lotes -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex-1 flex flex-col">
+                            <div class="p-4 border-b bg-gray-50">
+                                <h3 class="text-lg font-bold text-gray-800">Historial de Re-Inversiones</h3>
+                            </div>
+                            <div class="overflow-x-auto p-0 flex-1">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-100">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Inversión</th>
+                                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Bolsitas</th>
+                                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Costo Un.</th>
+                                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200">
+                                        <tr v-if="compras.length === 0">
+                                            <td colspan="6" class="px-4 py-6 text-center text-gray-500">No hay registros de compras aún.</td>
+                                        </tr>
+                                        <tr v-for="compra in comprasOrdenadas" :key="compra.id" class="hover:bg-gray-50 text-sm">
+                                            <td class="px-4 py-2 text-gray-600">{{ formatearFecha(compra.fecha) }}</td>
+                                            <td class="px-4 py-2 font-medium text-gray-900">{{ obtenerNombreProducto(compra.productoId) }}</td>
+                                            <td class="px-4 py-2 text-right text-gray-800">{{ formatMoney(compra.costo) }}</td>
+                                            <td class="px-4 py-2 text-center text-gray-600">{{ compra.cantidad }}</td>
+                                            <td class="px-4 py-2 text-center text-gray-500">{{ formatMoney(compra.costo / compra.cantidad) }}</td>
+                                            <td class="px-4 py-2 text-center">
+                                                <button @click="eliminarCompra(compra.id)" class="text-red-400 hover:text-red-700" title="Eliminar Inversión">
+                                                    <i class="fa-solid fa-trash text-xs"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== PESTAÑA: PRODUCTOS (CATÁLOGO) ==================== -->
+                <div v-show="currentTab === 'productos'" class="space-y-6 animate-[fadeIn_0.3s_ease-in-out]">
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <!-- Formulario Producto -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 md:w-1/3 shrink-0 h-fit">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Nuevo Producto</h2>
+                            <form @submit.prevent="registrarProducto" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Nombre del Producto</label>
+                                    <input type="text" v-model="formProducto.nombre" required placeholder="Ej. Gomitas de Mango" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Precio de Venta Sugerido ($)</label>
+                                    <input type="number" v-model.number="formProducto.precio" step="0.5" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm p-2 border">
+                                </div>
+                                <button type="submit" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-4 rounded-md transition-colors">
+                                    <i class="fa-solid fa-tag mr-2"></i>Añadir al Catálogo
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Lista de Productos -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex-1">
+                            <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+                                <h2 class="text-xl font-bold text-gray-800">Catálogo de Precios</h2>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                                <div v-for="prod in productos" :key="prod.id" class="border rounded-lg p-4 flex justify-between items-center hover:shadow-md transition-shadow bg-white">
+                                    <div>
+                                        <p class="font-bold text-gray-800">{{ prod.nombre }}</p>
+                                        <p class="text-brand font-medium">{{ formatMoney(prod.precio) }}</p>
+                                    </div>
+                                    <button @click="eliminarProducto(prod.id)" class="text-gray-400 hover:text-red-500 transition-colors bg-gray-50 hover:bg-red-50 p-2 rounded-full w-8 h-8 flex items-center justify-center">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+                                <div v-if="productos.length === 0" class="col-span-full text-center py-8 text-gray-500">
+                                    No hay productos en el catálogo.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configuración de tu Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAeRnkranTfJ-Ybbm3Skte84-xpdkxH78U",
+            authDomain: "gomithona.firebaseapp.com",
+            projectId: "gomithona",
+            storageBucket: "gomithona.firebasestorage.app",
+            messagingSenderId: "600729145239",
+            appId: "1:600729145239:web:6c7b15126d4c63ce803ed2"
+        };
+
+        const firebaseApp = initializeApp(firebaseConfig);
+        const auth = getAuth(firebaseApp);
+        const db = getFirestore(firebaseApp);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'gomithona-app';
+
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    user: null,
+                    unsubscribes: [],
+                    // Navegación
+                    tabs: [
+                        { id: 'ventas', name: 'Registro de Ventas', icon: 'fa-solid fa-cart-shopping' },
+                        { id: 'dashboard', name: 'Dashboard', icon: 'fa-solid fa-chart-pie' },
+                        { id: 'inventario', name: 'Inventario y Stock', icon: 'fa-solid fa-boxes-stacked' },
+                        { id: 'productos', name: 'Catálogo', icon: 'fa-solid fa-tags' }
+                    ],
+                    currentTab: 'ventas',
+                    mobileMenuOpen: false,
+                    
+                    // Notificaciones
+                    notification: { show: false, message: '', type: 'success' },
+                    notificationTimeout: null,
+
+                    // Bases de Datos
+                    productos: [],
+                    ventas: [],
+                    compras: [],
+
+                    // Formularios
+                    formVenta: { fecha: new Date().toISOString().split('T')[0], cliente: '', productoId: '', cantidad: 1, precio: 0, pagado: false, notas: '' },
+                    formCompra: { fecha: new Date().toISOString().split('T')[0], productoId: '', costo: 0, cantidad: 1 },
+                    formProducto: { nombre: '', precio: 10 }
+                }
+            },
+            computed: {
+                // =============== DASHBOARD COMPUTADOS ===============
+                estadisticas() {
+                    let totalVentas = 0;
+                    let totalPagado = 0;
+                    let totalDeuda = 0;
+                    
+                    this.ventas.forEach(v => {
+                        const total = v.cantidad * v.precio;
+                        totalVentas += total;
+                        if (v.pagado) totalPagado += total;
+                        else totalDeuda += total;
+                    });
+                    
+                    return { totalVentas, totalPagado, totalDeuda };
+                },
+                resumenPorCliente() {
+                    const mapa = {};
+                    this.ventas.forEach(v => {
+                        const nombre = v.cliente.trim();
+                        const total = v.cantidad * v.precio;
+                        if (!mapa[nombre]) mapa[nombre] = { nombre, pagado: 0, deuda: 0, total: 0 };
+                        
+                        mapa[nombre].total += total;
+                        if (v.pagado) mapa[nombre].pagado += total;
+                        else mapa[nombre].deuda += total;
+                    });
+                    return Object.values(mapa).sort((a, b) => b.deuda - a.deuda || b.total - a.total);
+                },
+                resumenPorProducto() {
+                    const mapa = {};
+                    this.ventas.forEach(v => {
+                        if (!mapa[v.productoId]) {
+                            mapa[v.productoId] = { id: v.productoId, nombre: this.obtenerNombreProducto(v.productoId), cantidad: 0, total: 0 };
+                        }
+                        mapa[v.productoId].cantidad += v.cantidad;
+                        mapa[v.productoId].total += (v.cantidad * v.precio);
+                    });
+                    return Object.values(mapa).sort((a, b) => b.total - a.total);
+                },
+                
+                // =============== INVENTARIO COMPUTADOS ===============
+                inventarioCalculado() {
+                    return this.productos.map(prod => {
+                        const misCompras = this.compras.filter(c => c.productoId === prod.id);
+                        const armadas = misCompras.reduce((sum, c) => sum + c.cantidad, 0);
+                        const inversionTotal = misCompras.reduce((sum, c) => sum + c.costo, 0);
+                        
+                        const misVentas = this.ventas.filter(v => v.productoId === prod.id);
+                        const vendidas = misVentas.reduce((sum, v) => sum + v.cantidad, 0);
+                        
+                        const stockActual = armadas - vendidas;
+                        const ingresoEsperadoTotal = armadas * prod.precio; 
+                        const gananciaLibre = ingresoEsperadoTotal - inversionTotal;
+
+                        return {
+                            id: prod.id,
+                            nombre: prod.nombre,
+                            armadas,
+                            vendidas,
+                            stockActual,
+                            inversionTotal,
+                            gananciaLibre
+                        };
+                    }).filter(item => item.armadas > 0 || item.vendidas > 0);
+                },
+                totalesInventario() {
+                    return this.inventarioCalculado.reduce((totales, item) => {
+                        totales.armadas += item.armadas;
+                        totales.vendidas += item.vendidas;
+                        totales.stock += item.stockActual;
+                        totales.inversion += item.inversionTotal;
+                        totales.ganancia += item.gananciaLibre;
+                        return totales;
+                    }, { armadas: 0, vendidas: 0, stock: 0, inversion: 0, ganancia: 0 });
+                },
+
+                // =============== UTILIDADES ORDEN ===============
+                ventasOrdenadas() {
+                    return [...this.ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha) || b.id - a.id);
+                },
+                comprasOrdenadas() {
+                    return [...this.compras].sort((a, b) => new Date(b.fecha) - new Date(a.fecha) || b.id - a.id);
+                }
+            },
+            methods: {
+                // Utilidades
+                formatMoney(value) {
+                    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value || 0);
+                },
+                formatearFecha(fechaStr) {
+                    if(!fechaStr) return '';
+                    const [y, m, d] = fechaStr.split('-');
+                    return `${d}/${m}/${y}`;
+                },
+                obtenerNombreProducto(id) {
+                    const prod = this.productos.find(p => p.id === id);
+                    return prod ? prod.nombre : 'Producto Eliminado';
+                },
+                mostrarNotificacion(mensaje, tipo = 'success') {
+                    this.notification.message = mensaje;
+                    this.notification.type = tipo;
+                    this.notification.show = true;
+                    if(this.notificationTimeout) clearTimeout(this.notificationTimeout);
+                    this.notificationTimeout = setTimeout(() => { this.notification.show = false; }, 3000);
+                },
+
+                // Lógica de Negocio: Ventas
+                actualizarPrecioVenta() {
+                    const prod = this.productos.find(p => p.id === this.formVenta.productoId);
+                    if (prod) this.formVenta.precio = prod.precio;
+                },
+                async registrarVenta() {
+                    if (!this.user) return;
+                    const id = Date.now();
+                    const nuevaVenta = { id, ...this.formVenta };
+                    try {
+                        await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', id.toString()), nuevaVenta);
+                        this.formVenta = { fecha: this.formVenta.fecha, cliente: '', productoId: '', cantidad: 1, precio: 0, pagado: false, notas: '' };
+                        this.mostrarNotificacion('Venta registrada con éxito');
+                    } catch(e) { console.error(e); this.mostrarNotificacion('Error al guardar', 'error'); }
+                },
+                async cambiarEstadoPago(id) {
+                    if (!this.user) return;
+                    const venta = this.ventas.find(v => v.id === id);
+                    if (venta) {
+                        try {
+                            await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', id.toString()), { ...venta, pagado: !venta.pagado });
+                        } catch(e) { console.error(e); }
+                    }
+                },
+                async eliminarVenta(id) {
+                    if (!this.user) return;
+                    if(confirm('¿Estás seguro de eliminar esta venta? Esto afectará tu caja y stock.')) {
+                        try {
+                            await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', id.toString()));
+                            this.mostrarNotificacion('Venta eliminada', 'error');
+                        } catch(e) { console.error(e); }
+                    }
+                },
+
+                // Lógica de Negocio: Compras / Re-inversión
+                async registrarCompra() {
+                    if (!this.user) return;
+                    const id = Date.now();
+                    const nuevaCompra = { id, ...this.formCompra };
+                    try {
+                        await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', id.toString()), nuevaCompra);
+                        this.formCompra = { fecha: this.formCompra.fecha, productoId: '', costo: 0, cantidad: 1 };
+                        this.mostrarNotificacion('Re-inversión agregada al stock');
+                    } catch(e) { console.error(e); }
+                },
+                async eliminarCompra(id) {
+                    if (!this.user) return;
+                    if(confirm('¿Seguro que deseas eliminar esta compra de inventario?')) {
+                        try {
+                            await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', id.toString()));
+                            this.mostrarNotificacion('Inversión eliminada', 'error');
+                        } catch(e) { console.error(e); }
+                    }
+                },
+
+                // Lógica de Negocio: Productos
+                async registrarProducto() {
+                    if (!this.user) return;
+                    const id = Date.now();
+                    const nuevoProducto = { id, nombre: this.formProducto.nombre, precio: this.formProducto.precio };
+                    try {
+                        await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id.toString()), nuevoProducto);
+                        this.formProducto = { nombre: '', precio: 10 };
+                        this.mostrarNotificacion('Producto añadido al catálogo');
+                    } catch(e) { console.error(e); }
+                },
+                async eliminarProducto(id) {
+                    if (!this.user) return;
+                    const enUso = this.ventas.some(v => v.productoId === id) || this.compras.some(c => c.productoId === id);
+                    if(enUso) {
+                        alert('No puedes eliminar este producto porque ya tiene ventas o inventario registrado.');
+                        return;
+                    }
+                    if(confirm('¿Eliminar producto del catálogo?')) {
+                        try {
+                            await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id.toString()));
+                            this.mostrarNotificacion('Producto eliminada', 'error');
+                        } catch(e) { console.error(e); }
+                    }
+                },
+
+                // Configuración Firebase Auth & Listeners
+                setupListeners() {
+                    if (!this.user) return;
+                    const uid = this.user.uid;
+                    
+                    this.unsubscribes.forEach(unsub => unsub());
+                    this.unsubscribes = [];
+
+                    const unsubProductos = onSnapshot(collection(db, 'artifacts', appId, 'users', uid, 'productos'), 
+                        (snapshot) => this.productos = snapshot.docs.map(doc => doc.data()),
+                        (err) => console.error(err));
+                    
+                    const unsubVentas = onSnapshot(collection(db, 'artifacts', appId, 'users', uid, 'ventas'), 
+                        (snapshot) => this.ventas = snapshot.docs.map(doc => doc.data()),
+                        (err) => console.error(err));
+                    
+                    const unsubCompras = onSnapshot(collection(db, 'artifacts', appId, 'users', uid, 'compras'), 
+                        (snapshot) => this.compras = snapshot.docs.map(doc => doc.data()),
+                        (err) => console.error(err));
+
+                    this.unsubscribes.push(unsubProductos, unsubVentas, unsubCompras);
+                },
+
+                async initAuth() {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Error Auth:", error);
+                        this.mostrarNotificacion("Error al conectar a la base de datos", "error");
+                    }
+                }
+            },
+            mounted() {
+                onAuthStateChanged(auth, (user) => {
+                    this.user = user;
+                    if (user) {
+                        this.setupListeners();
+                    }
+                });
+                this.initAuth();
+            },
+            unmounted() {
+                this.unsubscribes.forEach(unsub => unsub());
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>
