@@ -253,6 +253,9 @@
                                                 </button>
                                             </td>
                                             <td class="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
+                                                <button @click="abrirEdicion('venta', venta)" class="text-blue-500 hover:text-blue-700 transition-colors mr-3" title="Editar">
+                                                    <i class="fa-solid fa-pen"></i>
+                                                </button>
                                                 <button @click="eliminarVenta(venta.id)" class="text-red-500 hover:text-red-700 transition-colors" title="Eliminar">
                                                     <i class="fa-solid fa-trash"></i>
                                                 </button>
@@ -463,7 +466,10 @@
                                             <td class="px-4 py-2 text-right text-textmain">{{ formatMoney(compra.costo) }}</td>
                                             <td class="px-4 py-2 text-center text-textmuted">{{ compra.cantidad }}</td>
                                             <td class="px-4 py-2 text-center text-textmuted">{{ formatMoney(compra.costo / compra.cantidad) }}</td>
-                                            <td class="px-4 py-2 text-center">
+                                            <td class="px-4 py-2 text-center whitespace-nowrap">
+                                                <button @click="abrirEdicion('compra', compra)" class="text-blue-400 hover:text-blue-700 transition-colors mr-3" title="Editar Inversión">
+                                                    <i class="fa-solid fa-pen text-xs"></i>
+                                                </button>
                                                 <button @click="eliminarCompra(compra.id)" class="text-red-400 hover:text-red-700 transition-colors" title="Eliminar Inversión">
                                                     <i class="fa-solid fa-trash text-xs"></i>
                                                 </button>
@@ -508,9 +514,14 @@
                                         <p class="font-bold text-textmain">{{ prod.nombre }}</p>
                                         <p class="text-brand font-medium">{{ formatMoney(prod.precio) }}</p>
                                     </div>
-                                    <button @click="eliminarProducto(prod.id)" class="text-textmuted hover:text-red-500 transition-colors bg-appbg hover:bg-red-500/10 p-2 rounded-full w-8 h-8 flex items-center justify-center">
-                                        <i class="fa-solid fa-xmark"></i>
-                                    </button>
+                                    <div class="flex gap-1">
+                                        <button @click="abrirEdicion('producto', prod)" class="text-textmuted hover:text-blue-500 transition-colors bg-appbg hover:bg-blue-500/10 p-2 rounded-full w-8 h-8 flex items-center justify-center" title="Editar">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <button @click="eliminarProducto(prod.id)" class="text-textmuted hover:text-red-500 transition-colors bg-appbg hover:bg-red-500/10 p-2 rounded-full w-8 h-8 flex items-center justify-center" title="Eliminar">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div v-if="productos.length === 0" class="col-span-full text-center py-8 text-textmuted">
                                     No hay productos en el catálogo.
@@ -522,32 +533,32 @@
 
                 <!-- ==================== PESTAÑA: IMPORTAR EXCEL ==================== -->
                 <div v-show="currentTab === 'importar'" class="space-y-6 animate-[fadeIn_0.3s_ease-in-out] flex-1">
+                    
+                    <!-- Sección Exportar/Importar -->
                     <div class="bg-cardbg p-6 rounded-xl shadow-sm border border-bordercolor">
-                        <h2 class="text-xl font-bold text-textmain mb-4 border-b border-bordercolor pb-2"><i class="fa-solid fa-file-excel text-green-600 mr-2"></i>Migración desde Excel</h2>
-                        <p class="text-textmuted mb-6">Copia las celdas directamente desde tu Excel y pégalas en los cuadros de abajo. El sistema detectará automáticamente los productos que aún no tienes en tu catálogo, los creará y registrará todas tus ventas y stock en la nube.</p>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                            <div>
-                                <label class="block text-sm font-bold text-textmain mb-2">1. Pegar Registros de Ventas Semanales</label>
-                                <p class="text-xs text-textmuted mb-2">Orden esperado: Fecha, Cliente, Producto, Cantidad, Precio Unitario, Total, ¿Pagó?, Notas</p>
-                                <textarea v-model="importVentasText" class="w-full h-48 p-3 border border-bordercolor bg-cardbg text-textmain rounded-md shadow-sm focus:border-brand focus:ring-brand text-sm font-mono whitespace-pre text-nowrap overflow-auto" placeholder="10/4/2026	Michael	Cacahuates Adobados	1	$7	$7	SI	test..."></textarea>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-bold text-textmain mb-2">2. Pegar Registros de Stock (Re-Inversión)</label>
-                                <p class="text-xs text-textmuted mb-2">Orden esperado: FECHA, Producto, Re-Inversión, Bolsitas, Costo x Bolsita, Precio Venta...</p>
-                                <textarea v-model="importComprasText" class="w-full h-48 p-3 border border-bordercolor bg-cardbg text-textmain rounded-md shadow-sm focus:border-brand focus:ring-brand text-sm font-mono whitespace-pre text-nowrap overflow-auto" placeholder="22/3/2026	Gom. Tiburón.	$85	20	$4.25	$10.00..."></textarea>
-                            </div>
+                        <h2 class="text-xl font-bold text-textmain mb-4 border-b border-bordercolor pb-2"><i class="fa-solid fa-database text-brand mr-2"></i>Gestión y Respaldo de Datos</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <button @click="exportarCSV" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors flex justify-center items-center">
+                                <i class="fa-solid fa-download mr-2"></i>Exportar todo a CSV
+                            </button>
+                            
+                            <label class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition-colors flex justify-center items-center cursor-pointer">
+                                <i v-if="isProcessingBackup" class="fa-solid fa-spinner fa-spin mr-2"></i>
+                                <i v-else class="fa-solid fa-upload mr-2"></i>
+                                Restaurar desde CSV
+                                <input type="file" accept=".csv" class="hidden" @change="importarRespaldoCSV">
+                            </label>
+
+                            <button @click="borrarTodo" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-md transition-colors flex justify-center items-center">
+                                <i class="fa-solid fa-triangle-exclamation mr-2"></i>Borrar Todos los Datos
+                            </button>
                         </div>
-                        
-                        <button @click="procesarImportacion" :disabled="isImporting || (!importVentasText && !importComprasText)" 
-                            :class="['w-full font-bold py-3 px-4 rounded-md transition-colors flex justify-center items-center', 
-                                     (isImporting || (!importVentasText && !importComprasText)) ? 'bg-bordercolor text-textmuted cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white shadow-md']">
-                            <i v-if="isImporting" class="fa-solid fa-spinner fa-spin mr-2"></i>
-                            <i v-else class="fa-solid fa-cloud-arrow-up mr-2"></i>
-                            {{ isImporting ? 'Procesando y Guardando en Firebase...' : 'Procesar y Migrar Datos' }}
-                        </button>
                     </div>
-                </div>
+
+                    <!-- Sección Importar de Excel manual -->
+                    <div class="bg-cardbg p-6 rounded-xl shadow-sm border border-bordercolor">
+                        <h2 class="text-xl font-bold text-textmain mb-4 border-b border-bordercolor pb-2"><i class="fa-solid fa-file-excel text-green-600 mr-2"></i>Migración Manual desde Excel</h2>
+                        <p class="text-textmuted mb-6">Copia las celdas directamente desde tu Excel original y pégalas en los cuadros de abajo. El sistema detectará automáticamente los productos y registrará todas tus ventas y stock en la nube.</p>
 
                 <!-- ==================== FOOTER CRÉDITOS ==================== -->
                 <footer class="mt-8 pt-4 border-t border-bordercolor text-center pb-2 shrink-0">
@@ -560,6 +571,86 @@
 
             </div>
         </main>
+
+        <!-- ==================== MODAL DE EDICIÓN (GLOBAL) ==================== -->
+        <div v-if="showEditModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-[fadeIn_0.2s_ease-in-out]">
+            <div class="bg-cardbg rounded-xl shadow-2xl w-full max-w-md border border-bordercolor overflow-hidden flex flex-col">
+                <div class="p-4 border-b border-bordercolor flex justify-between items-center bg-appbg">
+                    <h3 class="text-lg font-bold text-textmain">
+                        <i class="fa-solid fa-pen mr-2 text-brand"></i>
+                        Editar {{ editType === 'venta' ? 'Venta' : (editType === 'compra' ? 'Inversión' : 'Producto') }}
+                    </h3>
+                    <button @click="showEditModal = false" class="text-textmuted hover:text-red-500 transition-colors">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="p-6">
+                    <!-- Formulario Edición Venta -->
+                    <form v-if="editType === 'venta'" @submit.prevent="guardarEdicion" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-textmain">Fecha</label>
+                            <input type="date" v-model="itemToEdit.fecha" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-textmain">Cliente</label>
+                            <input type="text" v-model="itemToEdit.cliente" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="w-1/2">
+                                <label class="block text-sm font-medium text-textmain">Cantidad</label>
+                                <input type="number" v-model.number="itemToEdit.cantidad" min="1" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
+                            </div>
+                            <div class="w-1/2">
+                                <label class="block text-sm font-medium text-textmain">Precio Unit. ($)</label>
+                                <input type="number" v-model.number="itemToEdit.precio" step="0.5" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-textmain">Notas</label>
+                            <input type="text" v-model="itemToEdit.notas" class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
+                        </div>
+                        <div class="flex items-center gap-2 mt-2">
+                            <input type="checkbox" id="editPago" v-model="itemToEdit.pagado" class="h-4 w-4 text-brand focus:ring-brand border-bordercolor rounded bg-cardbg">
+                            <label for="editPago" class="text-sm font-medium text-textmain">Estado: Pagado</label>
+                        </div>
+                        <button type="submit" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-2 px-4 rounded-md transition-colors mt-4">Actualizar Venta</button>
+                    </form>
+
+                    <!-- Formulario Edición Compra (Stock) -->
+                    <form v-if="editType === 'compra'" @submit.prevent="guardarEdicion" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-textmain">Fecha</label>
+                            <input type="date" v-model="itemToEdit.fecha" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="w-1/2">
+                                <label class="block text-sm font-medium text-textmain">Inversión ($)</label>
+                                <input type="number" v-model.number="itemToEdit.costo" step="0.5" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
+                            </div>
+                            <div class="w-1/2">
+                                <label class="block text-sm font-medium text-textmain">Bolsitas</label>
+                                <input type="number" v-model.number="itemToEdit.cantidad" min="1" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors mt-4">Actualizar Stock</button>
+                    </form>
+
+                    <!-- Formulario Edición Producto -->
+                    <form v-if="editType === 'producto'" @submit.prevent="guardarEdicion" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-textmain">Nombre</label>
+                            <input type="text" v-model="itemToEdit.nombre" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-textmain">Precio Sugerido ($)</label>
+                            <input type="number" v-model.number="itemToEdit.precio" step="0.5" required class="mt-1 block w-full rounded-md border-bordercolor shadow-sm focus:border-brand p-2 border bg-cardbg text-textmain">
+                        </div>
+                        <button type="submit" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-4 rounded-md transition-colors mt-4">Actualizar Producto</button>
+                    </form>
+                </div>
+            </div>
+        </div>
 
         <!-- ==================== MODAL DE CONFIGURACIÓN ==================== -->
         <div v-if="mostrarConfiguracion" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-[fadeIn_0.2s_ease-in-out]">
@@ -644,10 +735,16 @@
                         { id: 'dashboard', name: 'Dashboard', icon: 'fa-solid fa-chart-pie' },
                         { id: 'inventario', name: 'Inventario y Stock', icon: 'fa-solid fa-boxes-stacked' },
                         { id: 'productos', name: 'Catálogo', icon: 'fa-solid fa-tags' },
-                        { id: 'importar', name: 'Importar Excel', icon: 'fa-solid fa-file-import' }
+                        { id: 'importar', name: 'Gestión y Respaldos', icon: 'fa-solid fa-database' }
                     ],
                     currentTab: 'ventas',
                     mobileMenuOpen: false,
+                    
+                    // Modales y Estados Especiales
+                    showEditModal: false,
+                    editType: '', // 'venta', 'compra', 'producto'
+                    itemToEdit: {},
+                    isProcessingBackup: false,
                     
                     // Notificaciones
                     notification: { show: false, message: '', type: 'success' },
@@ -789,6 +886,25 @@
                     this.notificationTimeout = setTimeout(() => { this.notification.show = false; }, 3000);
                 },
 
+                // Lógica Global de Edición
+                abrirEdicion(tipo, item) {
+                    this.editType = tipo;
+                    this.itemToEdit = { ...item }; // Copia para no mutar directamente hasta guardar
+                    this.showEditModal = true;
+                },
+                async guardarEdicion() {
+                    if (!this.user) return;
+                    try {
+                        const coleccionName = this.editType === 'venta' ? 'ventas' : (this.editType === 'compra' ? 'compras' : 'productos');
+                        await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, coleccionName, this.itemToEdit.id.toString()), this.itemToEdit, { merge: true });
+                        this.showEditModal = false;
+                        this.mostrarNotificacion('Registro actualizado correctamente');
+                    } catch(e) {
+                        console.error(e);
+                        this.mostrarNotificacion('Error al guardar cambios', 'error');
+                    }
+                },
+
                 // Lógica de Negocio: Ventas
                 actualizarPrecioVenta() {
                     const prod = this.productos.find(p => p.id === this.formVenta.productoId);
@@ -868,6 +984,99 @@
                             this.mostrarNotificacion('Producto eliminada', 'error');
                         } catch(e) { console.error(e); }
                     }
+                },
+
+                // Lógica Avanzada de Base de Datos
+                async borrarTodo() {
+                    if (!this.user) return;
+                    if(!confirm('🚨 ¡ALERTA DE SEGURIDAD! 🚨\n\nEstás a punto de borrar TODOS tus productos, ventas e inventario. Esta acción NO se puede deshacer.\n\n¿Estás absolutamente seguro?')) return;
+                    
+                    const verificacion = prompt('Para confirmar que deseas eliminar toda tu información, escribe la palabra "BORRAR" (en mayúsculas):');
+                    if (verificacion !== 'BORRAR') {
+                        this.mostrarNotificacion('Operación cancelada. Datos a salvo.', 'success');
+                        return;
+                    }
+
+                    this.isProcessingBackup = true;
+                    try {
+                        for(let v of this.ventas) await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', v.id.toString()));
+                        for(let c of this.compras) await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', c.id.toString()));
+                        for(let p of this.productos) await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', p.id.toString()));
+                        
+                        this.mostrarNotificacion('Todos los datos han sido borrados de la base de datos.', 'success');
+                    } catch(e) { 
+                        console.error(e); 
+                        this.mostrarNotificacion('Ocurrió un error al borrar', 'error');
+                    }
+                    this.isProcessingBackup = false;
+                },
+
+                exportarCSV() {
+                    // Crea un CSV unificado para respaldo
+                    const escape = (str) => `"${String(str || '').replace(/"/g, '""')}"`;
+                    let csv = "TIPO,ID,FECHA,CLIENTE,PRODUCTO_ID,NOMBRE_PRODUCTO,CANTIDAD,PRECIO,COSTO,PAGADO,NOTAS\n";
+                    
+                    this.productos.forEach(p => {
+                        csv += `PRODUCTO,${p.id},,,,${escape(p.nombre)},,${p.precio},,,\n`;
+                    });
+                    this.ventas.forEach(v => {
+                        csv += `VENTA,${v.id},${v.fecha},${escape(v.cliente)},${v.productoId},,${v.cantidad},${v.precio},,${v.pagado},${escape(v.notas)}\n`;
+                    });
+                    this.compras.forEach(c => {
+                        csv += `COMPRA,${c.id},${c.fecha},,${c.productoId},,${c.cantidad},,,${c.costo},,\n`;
+                    });
+
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement("a");
+                    link.setAttribute("href", URL.createObjectURL(blob));
+                    link.setAttribute("download", `GomiThoNa_Backup_${new Date().toISOString().split('T')[0]}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    this.mostrarNotificacion('Respaldo CSV descargado');
+                },
+
+                async importarRespaldoCSV(event) {
+                    if (!this.user) return;
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    this.isProcessingBackup = true;
+                    try {
+                        const text = await file.text();
+                        const lineas = text.trim().split('\n');
+                        
+                        for (let i = 1; i < lineas.length; i++) { // Salta cabeceras
+                            // Separar por comas respetando comillas (regex básico para CSV)
+                            const cols = lineas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(col => col.replace(/^"|"$/g, '').trim());
+                            if(cols.length < 1) continue;
+
+                            const tipo = cols[0];
+                            const id = cols[1];
+
+                            if (tipo === 'PRODUCTO') {
+                                await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id), {
+                                    id: Number(id), nombre: cols[5], precio: Number(cols[7])
+                                });
+                            } else if (tipo === 'VENTA') {
+                                await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', id), {
+                                    id: Number(id), fecha: cols[2], cliente: cols[3], productoId: Number(cols[4]),
+                                    cantidad: Number(cols[6]), precio: Number(cols[7]), pagado: cols[9] === 'true', notas: cols[10]
+                                });
+                            } else if (tipo === 'COMPRA') {
+                                await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', id), {
+                                    id: Number(id), fecha: cols[2], productoId: Number(cols[4]), 
+                                    cantidad: Number(cols[6]), costo: Number(cols[8])
+                                });
+                            }
+                        }
+                        this.mostrarNotificacion('Respaldo restaurado con éxito');
+                    } catch (error) {
+                        console.error(error);
+                        this.mostrarNotificacion('El archivo CSV no tiene el formato correcto de respaldo.', 'error');
+                    }
+                    this.isProcessingBackup = false;
+                    event.target.value = ''; // Limpiar input file
                 },
 
                 // Lógica de Migración Excel
