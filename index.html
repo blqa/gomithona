@@ -458,14 +458,20 @@
         import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Configuración de tu Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyAeRnkranTfJ-Ybbm3Skte84-xpdkxH78U",
-            authDomain: "gomithona.firebaseapp.com",
-            projectId: "gomithona",
-            storageBucket: "gomithona.firebasestorage.app",
-            messagingSenderId: "600729145239",
-            appId: "1:600729145239:web:6c7b15126d4c63ce803ed2"
-        };
+        let firebaseConfig;
+        if (typeof __firebase_config !== 'undefined') {
+            firebaseConfig = JSON.parse(__firebase_config);
+        } else {
+            // Usar tu configuración manual si se exporta el archivo fuera de esta plataforma
+            firebaseConfig = {
+                apiKey: "AIzaSyAeRnkranTfJ-Ybbm3Skte84-xpdkxH78U",
+                authDomain: "gomithona.firebaseapp.com",
+                projectId: "gomithona",
+                storageBucket: "gomithona.firebasestorage.app",
+                messagingSenderId: "600729145239",
+                appId: "1:600729145239:web:6c7b15126d4c63ce803ed2"
+            };
+        }
 
         const firebaseApp = initializeApp(firebaseConfig);
         const auth = getAuth(firebaseApp);
@@ -718,7 +724,12 @@
                 async initAuth() {
                     try {
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
+                            try {
+                                await signInWithCustomToken(auth, __initial_auth_token);
+                            } catch (tokenError) {
+                                console.warn("Error con el token de entorno, usando modo anónimo", tokenError);
+                                await signInAnonymously(auth);
+                            }
                         } else {
                             await signInAnonymously(auth);
                         }
