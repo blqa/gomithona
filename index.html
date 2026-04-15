@@ -448,6 +448,35 @@
                     </div>
                 </div>
 
+                <!-- ==================== PESTAÑA: IMPORTAR EXCEL ==================== -->
+                <div v-show="currentTab === 'importar'" class="space-y-6 animate-[fadeIn_0.3s_ease-in-out]">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2"><i class="fa-solid fa-file-excel text-green-600 mr-2"></i>Migración desde Excel</h2>
+                        <p class="text-gray-600 mb-6">Copia las celdas directamente desde tu Excel y pégalas en los cuadros de abajo. El sistema detectará automáticamente los productos que aún no tienes en tu catálogo, los creará y registrará todas tus ventas y stock en la nube.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">1. Pegar Registros de Ventas Semanales</label>
+                                <p class="text-xs text-gray-500 mb-2">Orden esperado: Fecha, Cliente, Producto, Cantidad, Precio Unitario, Total, ¿Pagó?, Notas</p>
+                                <textarea v-model="importVentasText" class="w-full h-48 p-3 border border-gray-300 rounded-md shadow-sm focus:border-brand focus:ring-brand text-sm font-mono whitespace-pre text-nowrap overflow-auto" placeholder="10/4/2026	Michael	Cacahuates Adobados	1	$7	$7	SI	test..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">2. Pegar Registros de Stock (Re-Inversión)</label>
+                                <p class="text-xs text-gray-500 mb-2">Orden esperado: FECHA, Producto, Re-Inversión, Bolsitas, Costo x Bolsita, Precio Venta...</p>
+                                <textarea v-model="importComprasText" class="w-full h-48 p-3 border border-gray-300 rounded-md shadow-sm focus:border-brand focus:ring-brand text-sm font-mono whitespace-pre text-nowrap overflow-auto" placeholder="22/3/2026	Gom. Tiburón.	$85	20	$4.25	$10.00..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <button @click="procesarImportacion" :disabled="isImporting || (!importVentasText && !importComprasText)" 
+                            :class="['w-full font-bold py-3 px-4 rounded-md transition-colors flex justify-center items-center', 
+                                     (isImporting || (!importVentasText && !importComprasText)) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white shadow-md']">
+                            <i v-if="isImporting" class="fa-solid fa-spinner fa-spin mr-2"></i>
+                            <i v-else class="fa-solid fa-cloud-arrow-up mr-2"></i>
+                            {{ isImporting ? 'Procesando y Guardando en Firebase...' : 'Procesar y Migrar Datos' }}
+                        </button>
+                    </div>
+                </div>
+
             </div>
         </main>
     </div>
@@ -490,7 +519,8 @@
                         { id: 'ventas', name: 'Registro de Ventas', icon: 'fa-solid fa-cart-shopping' },
                         { id: 'dashboard', name: 'Dashboard', icon: 'fa-solid fa-chart-pie' },
                         { id: 'inventario', name: 'Inventario y Stock', icon: 'fa-solid fa-boxes-stacked' },
-                        { id: 'productos', name: 'Catálogo', icon: 'fa-solid fa-tags' }
+                        { id: 'productos', name: 'Catálogo', icon: 'fa-solid fa-tags' },
+                        { id: 'importar', name: 'Importar Excel', icon: 'fa-solid fa-file-import' }
                     ],
                     currentTab: 'ventas',
                     mobileMenuOpen: false,
@@ -503,6 +533,11 @@
                     productos: [],
                     ventas: [],
                     compras: [],
+
+                    // Migración
+                    importVentasText: '',
+                    importComprasText: '',
+                    isImporting: false,
 
                     // Formularios
                     formVenta: { fecha: new Date().toISOString().split('T')[0], cliente: '', productoId: '', cantidad: 1, precio: 0, pagado: false, notas: '' },
@@ -695,6 +730,129 @@
                             await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id.toString()));
                             this.mostrarNotificacion('Producto eliminada', 'error');
                         } catch(e) { console.error(e); }
+                    }
+                },
+
+                // Lógica de Migración Excel
+                parseExcelDate(dateStr) {
+                    if(!dateStr) return new Date().toISOString().split('T')[0];
+                    const parts = dateStr.trim().split('/');
+                    if(parts.length === 3) {
+                        let [d, m, y] = parts;
+                        if(d.length === 1) d = '0' + d;
+                        if(m.length === 1) m = '0' + m;
+                        return `${y}-${m}-${d}`;
+                    }
+                    return dateStr;
+                },
+                parseExcelCurrency(currStr) {
+                    if(!currStr) return 0;
+                    return parseFloat(currStr.toString().replace(/[^0-9.-]+/g,"")) || 0;
+                },
+                async procesarImportacion() {
+                    if (!this.user) {
+                        this.mostrarNotificacion("Espera a que cargue la base de datos.", "error");
+                        return;
+                    }
+                    this.isImporting = true;
+                    try {
+                        const ventasLines = this.importVentasText.trim().split('\n').filter(l => l);
+                        const comprasLines = this.importComprasText.trim().split('\n').filter(l => l);
+
+                        let uniqueProducts = new Set();
+                        let parsedVentas = [];
+                        let parsedCompras = [];
+
+                        // Extraer Ventas
+                        for(let line of ventasLines) {
+                            const cols = line.split('\t'); // Excel separa columnas por Tabulador
+                            if(cols.length < 4 || cols[0].toLowerCase().includes('fecha')) continue; // Ignorar encabezados
+                            const nombreProd = cols[2].trim();
+                            uniqueProducts.add(nombreProd);
+                            parsedVentas.push({
+                                fecha: this.parseExcelDate(cols[0]),
+                                cliente: cols[1].trim(),
+                                productoNombre: nombreProd,
+                                cantidad: parseInt(cols[3] || 1),
+                                precio: this.parseExcelCurrency(cols[4]),
+                                pagado: cols[6] ? cols[6].trim().toUpperCase() === 'SI' : false,
+                                notas: cols[7] ? cols[7].trim() : ''
+                            });
+                        }
+
+                        // Extraer Compras
+                        for(let line of comprasLines) {
+                            const cols = line.split('\t');
+                            if(cols.length < 4 || cols[0].toLowerCase().includes('fecha')) continue;
+                            const nombreProd = cols[1].trim();
+                            uniqueProducts.add(nombreProd);
+                            parsedCompras.push({
+                                fecha: this.parseExcelDate(cols[0]),
+                                productoNombre: nombreProd,
+                                costo: this.parseExcelCurrency(cols[2]),
+                                cantidad: parseInt(cols[3] || 1),
+                                precioVentaCat: cols.length >= 6 ? this.parseExcelCurrency(cols[5]) : 10 
+                            });
+                        }
+
+                        // Mapear y crear productos faltantes automáticamente
+                        let productMap = {}; 
+                        for(let p of this.productos) {
+                            productMap[p.nombre.toLowerCase()] = p.id;
+                        }
+
+                        let timeOffset = 0; // Para generar IDs únicos
+                        for(let prodName of uniqueProducts) {
+                            const nameLower = prodName.toLowerCase();
+                            if(!productMap[nameLower]) {
+                                timeOffset++;
+                                const id = Date.now() + timeOffset;
+                                let suggestedPrice = 10;
+                                const c = parsedCompras.find(comp => comp.productoNombre.toLowerCase() === nameLower);
+                                if (c && c.precioVentaCat) suggestedPrice = c.precioVentaCat;
+
+                                const newProd = { id, nombre: prodName, precio: suggestedPrice };
+                                await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'productos', id.toString()), newProd);
+                                productMap[nameLower] = id;
+                            }
+                        }
+
+                        // Guardar Ventas a la Nube
+                        for(let v of parsedVentas) {
+                            timeOffset++;
+                            const id = Date.now() + timeOffset;
+                            const ventaToSave = {
+                                id, fecha: v.fecha, cliente: v.cliente,
+                                productoId: productMap[v.productoNombre.toLowerCase()],
+                                cantidad: v.cantidad, precio: v.precio,
+                                pagado: v.pagado, notas: v.notas
+                            };
+                            await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'ventas', id.toString()), ventaToSave);
+                        }
+
+                        // Guardar Stock a la Nube
+                        for(let c of parsedCompras) {
+                            timeOffset++;
+                            const id = Date.now() + timeOffset;
+                            const compraToSave = {
+                                id, fecha: c.fecha,
+                                productoId: productMap[c.productoNombre.toLowerCase()],
+                                costo: c.costo, cantidad: c.cantidad
+                            };
+                            await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'compras', id.toString()), compraToSave);
+                        }
+
+                        // Limpiar formulario y cambiar de pestaña
+                        this.importVentasText = '';
+                        this.importComprasText = '';
+                        this.isImporting = false;
+                        this.currentTab = 'dashboard';
+                        this.mostrarNotificacion("¡Migración completada con éxito!");
+
+                    } catch (error) {
+                        console.error(error);
+                        this.isImporting = false;
+                        this.mostrarNotificacion("Error al procesar. Verifica que copiaste bien las columnas.", "error");
                     }
                 },
 
